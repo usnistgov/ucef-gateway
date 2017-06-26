@@ -1,42 +1,7 @@
 package gov.nist.hla.ii;
 
-import gov.nist.hla.ii.exception.DuplicateObjectRegistration;
-import gov.nist.hla.ii.exception.PropertyNotAssigned;
-import gov.nist.hla.ii.exception.PropertyNotFound;
-import gov.nist.hla.ii.exception.RTIAmbassadorException;
-import gov.nist.sds4emf.Deserialize;
-import hla.rti.AsynchronousDeliveryAlreadyEnabled;
-import hla.rti.AttributeHandleSet;
-import hla.rti.AttributeNotDefined;
-import hla.rti.AttributeNotOwned;
-import hla.rti.ConcurrentAccessAttempted;
-import hla.rti.EnableTimeConstrainedPending;
-import hla.rti.EnableTimeRegulationPending;
-import hla.rti.FederateLoggingServiceCalls;
-import hla.rti.FederateNotExecutionMember;
-import hla.rti.FederationExecutionDoesNotExist;
-import hla.rti.InteractionClassNotDefined;
-import hla.rti.InteractionClassNotPublished;
-import hla.rti.InteractionParameterNotDefined;
-import hla.rti.NameNotFound;
-import hla.rti.ObjectClassNotDefined;
-import hla.rti.ObjectClassNotPublished;
-import hla.rti.ObjectNotKnown;
-import hla.rti.OwnershipAcquisitionPending;
-import hla.rti.RTIambassador;
-import hla.rti.RTIexception;
-import hla.rti.RTIinternalError;
-import hla.rti.ResignAction;
-import hla.rti.RestoreInProgress;
-import hla.rti.SaveInProgress;
-import hla.rti.SuppliedAttributes;
-import hla.rti.SuppliedParameters;
-import hla.rti.TimeConstrainedAlreadyEnabled;
-import hla.rti.TimeRegulationAlreadyEnabled;
-import hla.rti.jlc.EncodingHelpers;
-import hla.rti.jlc.RtiFactoryFactory;
-
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -60,6 +25,45 @@ import org.ieee.standards.ieee1516._2010._2010Package;
 import org.ieee.standards.ieee1516._2010.util._2010ResourceFactoryImpl;
 import org.portico.impl.hla13.types.DoubleTime;
 import org.portico.impl.hla13.types.DoubleTimeInterval;
+
+import gov.nist.hla.ii.exception.PropertyNotAssigned;
+import gov.nist.hla.ii.exception.PropertyNotFound;
+import gov.nist.hla.ii.exception.RTIAmbassadorException;
+import gov.nist.sds4emf.Deserialize;
+import hla.rti.AsynchronousDeliveryAlreadyEnabled;
+import hla.rti.AttributeHandleSet;
+import hla.rti.AttributeNotDefined;
+import hla.rti.AttributeNotOwned;
+import hla.rti.ConcurrentAccessAttempted;
+import hla.rti.EnableTimeConstrainedPending;
+import hla.rti.EnableTimeRegulationPending;
+import hla.rti.FederateLoggingServiceCalls;
+import hla.rti.FederateNotExecutionMember;
+import hla.rti.FederationExecutionDoesNotExist;
+import hla.rti.InteractionClassNotDefined;
+import hla.rti.InteractionClassNotPublished;
+import hla.rti.InteractionParameterNotDefined;
+import hla.rti.InvalidFederationTime;
+import hla.rti.LogicalTime;
+import hla.rti.NameNotFound;
+import hla.rti.ObjectClassNotDefined;
+import hla.rti.ObjectClassNotPublished;
+import hla.rti.ObjectNotKnown;
+import hla.rti.OwnershipAcquisitionPending;
+import hla.rti.RTIambassador;
+import hla.rti.RTIexception;
+import hla.rti.RTIinternalError;
+import hla.rti.ResignAction;
+import hla.rti.RestoreInProgress;
+import hla.rti.SaveInProgress;
+import hla.rti.SuppliedAttributes;
+import hla.rti.SuppliedParameters;
+import hla.rti.TimeConstrainedAlreadyEnabled;
+import hla.rti.TimeRegulationAlreadyEnabled;
+import hla.rti.jlc.EncodingHelpers;
+import hla.rti.jlc.RtiFactoryFactory;
+import hla.rti1516e.LogicalTimeFactoryFactory;
+import hla.rti1516e.exceptions.CouldNotDecode;
 
 // assume that SIMULATION_END is not sent as a Receive Order message
 public class InjectionFederate implements Runnable {
@@ -209,22 +213,8 @@ public class InjectionFederate implements Runnable {
 		try {
 			log.trace("enter while==>");
 			while (state != State.TERMINATING) {
-
 				handleMessages();
-
-				// Queue<InterObjDef> interactions = interObjectInjection
-				// .getPublications(newLogicalTime);
-				//
-				// InterObjDef def = null;
-				// while ((def = interactions.poll()) != null) {
-				// log.trace("def=" + def);
-				// if (def.getType() == InterObjDef.TYPE.OBJECT) {
-				// updateObject(def);
-				// } else {
-				// injectInteraction(def);
-				// }
-				// }
-				processIntObjs();
+				processIntObjs(newLogicalTime);
 				advanceLogicalTime();
 			}
 		} catch (RTIAmbassadorException e) {
@@ -251,7 +241,7 @@ public class InjectionFederate implements Runnable {
 	private void processIntObjs(Double newLogicalTime) {
 		Queue<InterObjDef> interactions = null;
 		if (newLogicalTime == null) {
-			interactions = interObjectInjection.getPreSynchInteractions(newLogicalTime);
+			interactions = interObjectInjection.getPreSynchInteractions();
 		} else {
 			interactions = interObjectInjection.getPublications(newLogicalTime);
 		}
@@ -486,7 +476,7 @@ public class InjectionFederate implements Runnable {
 	}
 
 	public void injectInteraction(InterObjDef def, Double logicalTime) {
-		injectInteraction(def.getName(), def.getParameters());
+		injectInteraction(def.getName(), def.getParameters(), logicalTime);
 	}
 
 	public void injectInteraction(String interactionName, Map<String, String> parameters, Double logicalTime) {
@@ -499,8 +489,9 @@ public class InjectionFederate implements Runnable {
 			if (logicalTime == null) {
 				rtiAmb.sendInteraction(interactionHandle, suppliedParameters, generateTag());
 			} else {
-				rtiAmb.sendInteraction(interactionHandle, suppliedParameters, generateTag(), logicalTime);
-			}
+				LogicalTime lt = (LogicalTime) LogicalTimeFactoryFactory.getLogicalTimeFactory("").decodeTime(convertToByteArray(logicalTime.doubleValue()), 0);
+				rtiAmb.sendInteraction(interactionHandle, suppliedParameters, generateTag(), lt);
+				}
 		} catch (NameNotFound | FederateNotExecutionMember | RTIinternalError e) {
 			log.error("", e);
 		} catch (InteractionClassNotDefined e) {
@@ -515,9 +506,20 @@ public class InjectionFederate implements Runnable {
 			log.error("", e);
 		} catch (ConcurrentAccessAttempted e) {
 			log.error("", e);
+		} catch (CouldNotDecode e) {
+			log.error("", e);
+		} catch (InvalidFederationTime e) {
+			log.error("", e);
 		}
 	}
-
+	
+	private byte[] convertToByteArray(double value) {
+	      byte[] bytes = new byte[8];
+	      ByteBuffer buffer = ByteBuffer.allocate(bytes.length);
+	      buffer.putDouble(value);
+	      return buffer.array();
+	  }
+	
 	public SuppliedParameters assembleParameters(int interactionHandle, Map<String, String> parameters) {
 		SuppliedParameters suppliedParameters = null;
 		try {

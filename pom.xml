@@ -7,6 +7,7 @@
   <modules>
   	<module>fom2emf</module>
   	<module>interaction-injection</module>
+    <module>gateway-injection</module>
   	<module>sds4emf</module>
   </modules>
 </project>
