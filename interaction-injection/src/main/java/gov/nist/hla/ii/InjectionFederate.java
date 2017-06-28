@@ -213,6 +213,7 @@ public class InjectionFederate implements Runnable {
 		try {
 			log.trace("enter while==>");
 			while (state != State.TERMINATING) {
+
 				handleMessages();
 				processIntObjs(newLogicalTime);
 				advanceLogicalTime();
@@ -491,7 +492,7 @@ public class InjectionFederate implements Runnable {
 			} else {
 				LogicalTime lt = (LogicalTime) LogicalTimeFactoryFactory.getLogicalTimeFactory("").decodeTime(convertToByteArray(logicalTime.doubleValue()), 0);
 				rtiAmb.sendInteraction(interactionHandle, suppliedParameters, generateTag(), lt);
-				}
+			}
 		} catch (NameNotFound | FederateNotExecutionMember | RTIinternalError e) {
 			log.error("", e);
 		} catch (InteractionClassNotDefined e) {
@@ -518,6 +519,7 @@ public class InjectionFederate implements Runnable {
 	      ByteBuffer buffer = ByteBuffer.allocate(bytes.length);
 	      buffer.putDouble(value);
 	      return buffer.array();
+
 	  }
 	
 	public SuppliedParameters assembleParameters(int interactionHandle, Map<String, String> parameters) {
@@ -527,7 +529,7 @@ public class InjectionFederate implements Runnable {
 			for (Map.Entry<String, String> entry : parameters.entrySet()) {
 				int parameterHandle = rtiAmb.getParameterHandle(entry.getKey(), interactionHandle);
 				byte[] parameterValue = EncodingHelpers
-						.encodeString(String.format("%s:%f", entry.getValue(), getLbts()));
+						.encodeString(String.format("%s:%f", entry.getKey(), getLbts()));
 				suppliedParameters.add(parameterHandle, parameterValue);
 			}
 		} catch (NameNotFound | FederateNotExecutionMember | RTIinternalError e) {
@@ -584,8 +586,7 @@ public class InjectionFederate implements Runnable {
 			suppliedAttributes = RtiFactoryFactory.getRtiFactory().createSuppliedAttributes();
 			for (Map.Entry<String, String> entry : attributes.entrySet()) {
 				int attributeHandle = rtiAmb.getAttributeHandle(entry.getKey(), classHandle);
-				byte[] attributeValue = EncodingHelpers
-						.encodeString(String.format("%s:%f", entry.getValue(), getLbts()));
+				byte[] attributeValue = entry.getValue().getBytes();
 				suppliedAttributes.add(attributeHandle, attributeValue);
 			}
 		} catch (RTIinternalError e) {
