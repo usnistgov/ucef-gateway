@@ -528,8 +528,10 @@ public class InjectionFederate implements Runnable {
 			suppliedParameters = RtiFactoryFactory.getRtiFactory().createSuppliedParameters();
 			for (Map.Entry<String, String> entry : parameters.entrySet()) {
 				int parameterHandle = rtiAmb.getParameterHandle(entry.getKey(), interactionHandle);
+//				byte[] parameterValue = EncodingHelpers
+//						.encodeString(String.format("%s:%f", entry.getKey(), getLbts()));
 				byte[] parameterValue = EncodingHelpers
-						.encodeString(String.format("%s:%f", entry.getKey(), getLbts()));
+						.encodeString(String.format("%f", getLbts()));
 				suppliedParameters.add(parameterHandle, parameterValue);
 			}
 		} catch (NameNotFound | FederateNotExecutionMember | RTIinternalError e) {
