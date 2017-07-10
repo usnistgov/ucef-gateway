@@ -24,6 +24,7 @@ import org.ieee.standards.ieee1516._2010.SharingEnumerations;
 import org.ieee.standards.ieee1516._2010._2010Package;
 import org.ieee.standards.ieee1516._2010.util._2010ResourceFactoryImpl;
 import org.portico.impl.hla13.types.DoubleTime;
+import org.portico.impl.hla13.types.DoubleTimeFactory;
 import org.portico.impl.hla13.types.DoubleTimeInterval;
 
 import gov.nist.hla.ii.exception.PropertyNotAssigned;
@@ -45,6 +46,7 @@ import hla.rti.InteractionClassNotPublished;
 import hla.rti.InteractionParameterNotDefined;
 import hla.rti.InvalidFederationTime;
 import hla.rti.LogicalTime;
+import hla.rti.LogicalTimeFactory;
 import hla.rti.NameNotFound;
 import hla.rti.ObjectClassNotDefined;
 import hla.rti.ObjectClassNotPublished;
@@ -60,7 +62,6 @@ import hla.rti.SuppliedAttributes;
 import hla.rti.SuppliedParameters;
 import hla.rti.TimeConstrainedAlreadyEnabled;
 import hla.rti.TimeRegulationAlreadyEnabled;
-import hla.rti.jlc.EncodingHelpers;
 import hla.rti.jlc.RtiFactoryFactory;
 import hla.rti1516e.LogicalTimeFactoryFactory;
 import hla.rti1516e.exceptions.CouldNotDecode;
@@ -490,7 +491,8 @@ public class InjectionFederate implements Runnable {
 			if (logicalTime == null) {
 				rtiAmb.sendInteraction(interactionHandle, suppliedParameters, generateTag());
 			} else {
-				LogicalTime lt = (LogicalTime) LogicalTimeFactoryFactory.getLogicalTimeFactory("").decodeTime(convertToByteArray(logicalTime.doubleValue()), 0);
+				LogicalTimeFactory ltf = new DoubleTimeFactory();
+				LogicalTime lt = ltf.decode(this.convertToByteArray(logicalTime), 0);
 				rtiAmb.sendInteraction(interactionHandle, suppliedParameters, generateTag(), lt);
 			}
 		} catch (NameNotFound | FederateNotExecutionMember | RTIinternalError e) {
@@ -507,16 +509,15 @@ public class InjectionFederate implements Runnable {
 			log.error("", e);
 		} catch (ConcurrentAccessAttempted e) {
 			log.error("", e);
-		} catch (CouldNotDecode e) {
-			log.error("", e);
 		} catch (InvalidFederationTime e) {
+			log.error("", e);
+		} catch (hla.rti.CouldNotDecode e) {
 			log.error("", e);
 		}
 	}
 	
 	private byte[] convertToByteArray(double value) {
-	      byte[] bytes = new byte[8];
-	      ByteBuffer buffer = ByteBuffer.allocate(bytes.length);
+	      ByteBuffer buffer = ByteBuffer.allocate(8);
 	      buffer.putDouble(value);
 	      return buffer.array();
 

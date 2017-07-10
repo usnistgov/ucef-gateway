@@ -96,21 +96,21 @@ public class FederateAmbassador extends NullFederateAmbassador {
 			throws InvalidFederationTime, EnableTimeRegulationWasNotPending, FederateInternalError {
 		isTimeRegulating = true;
 		logicalTime = convertTime(theFederateTime);
-		log.info("time regulation enabled: t=" + logicalTime);
+		log.debug("time regulation enabled: t=" + logicalTime);
 	}
 
 	public void timeConstrainedEnabled(LogicalTime theFederateTime)
 			throws InvalidFederationTime, EnableTimeConstrainedWasNotPending, FederateInternalError {
 		isTimeConstrained = true;
 		logicalTime = convertTime(theFederateTime);
-		log.info("time constrained enabled: t=" + logicalTime);
+		log.debug("time constrained enabled: t=" + logicalTime);
 	}
 
 	public void timeAdvanceGrant(LogicalTime theTime)
 			throws InvalidFederationTime, TimeAdvanceWasNotInProgress, FederateInternalError {
 		isTimeAdvancing = false;
 		logicalTime = convertTime(theTime);
-		log.info("time advance granted: t=" + logicalTime);
+		log.debug("time advance granted: t=" + logicalTime);
 	}
 
 	public void receiveInteraction(int interactionClass, ReceivedInteraction theInteraction, byte[] userSuppliedTag)
