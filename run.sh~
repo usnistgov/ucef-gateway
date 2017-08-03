@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+DIR=`pwd`
+CPSWT_HOME=$HOME/cpswt/cpswt-core/cpswt-core/fedmanager-host/target
+TRIPLE_HOME=
+RTI_FILE=$DIR/RTI.rid
+
+xterm -hold -T "Federation Manager" $logtofile -e "mvn exec:java -X -P FederationManagerExecJava -Dlog4j.configurationFile='`pwd`/conf/log4j2.xml'" &
+
+

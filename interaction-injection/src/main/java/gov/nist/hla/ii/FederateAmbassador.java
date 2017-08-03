@@ -32,7 +32,7 @@ public class FederateAmbassador extends NullFederateAmbassador {
 
 	private final double federateTime = 0.0;
 	private final double federateLookahead = 1.0;
-	
+
 	private class ObjectDetails {
 		private int objectHandle;
 		private int objectClass;
@@ -44,9 +44,9 @@ public class FederateAmbassador extends NullFederateAmbassador {
 			this.objectName = objectName;
 		}
 
-		public int getObjectHandle() {
-			return objectHandle;
-		}
+//		public int getObjectHandle() {
+//			return objectHandle;
+//		}
 
 		public int getObjectClass() {
 			return objectClass;
@@ -133,8 +133,11 @@ public class FederateAmbassador extends NullFederateAmbassador {
 			throws CouldNotDiscover, ObjectClassNotKnown, FederateInternalError {
 		log.info("discovered new object instance: (handle, class, name)=" + "(" + theObject + ", " + theObjectClass
 				+ ", " + objectName + ")");
-		if (objectInstances.put(theObject, new ObjectDetails(theObject, theObjectClass, objectName)) != null) {
-			throw new FederateInternalError("discovered multiple object instances with handle " + theObject);
+		if (objectInstances.get(theObject) == null) {
+			objectInstances.put(theObject, new ObjectDetails(theObject, theObjectClass, objectName));
+		} else {
+			log.warn(String.format("Already discovered: theObject=%d theObjectClass=%d objectName=%s", theObject,
+					theObjectClass, objectName));
 		}
 	}
 

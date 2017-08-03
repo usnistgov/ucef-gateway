@@ -6,7 +6,7 @@ import org.apache.logging.log4j.Logger;
 public class GatewayMain {
 
 	private static final Logger log = LogManager.getLogger(GatewayMain.class);
-	
+
 	public static void main(String[] args) {
 		if (args.length != 1) {
 			log.error("command line argument for properties file not specified");
@@ -18,13 +18,14 @@ public class GatewayMain {
 			InjectionFederate app = new InjectionFederate();
 			app.loadConfiguration(args[0]);
 			app.init();
-			GatewayInjection inj = new GatewayInjection();
+			GatewayInjection inj = new GatewayInjection(app);
 			app.setInterObjectInjection(inj);
 			GatewayReception recp = new GatewayReception();
 			app.setInterObjectReception(recp);
 			app.run();
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
-		}	}
+		}
+	}
 
 }
