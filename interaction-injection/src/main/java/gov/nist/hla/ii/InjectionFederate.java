@@ -14,6 +14,8 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.cpswt.hla.SynchronizationPoints;
+import org.cpswt.hla.SynchronizedFederate;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.ieee.standards.ieee1516._2010.AttributeType1;
 import org.ieee.standards.ieee1516._2010.DocumentRoot;
@@ -63,8 +65,6 @@ import hla.rti.SuppliedParameters;
 import hla.rti.TimeConstrainedAlreadyEnabled;
 import hla.rti.TimeRegulationAlreadyEnabled;
 import hla.rti.jlc.RtiFactoryFactory;
-import hla.rti1516e.LogicalTimeFactoryFactory;
-import hla.rti1516e.exceptions.CouldNotDecode;
 
 // assume that SIMULATION_END is not sent as a Receive Order message
 public class InjectionFederate implements Runnable {
@@ -206,8 +206,8 @@ public class InjectionFederate implements Runnable {
 	public void run() {
 		log.trace("run==>");
 		try {
-			synchronize(READY_TO_POPULATE);
-			synchronize(READY_TO_RUN);
+			synchronize(SynchronizationPoints.ReadyToPopulate);
+			synchronize(SynchronizationPoints.ReadyToRun);
 		} catch (RTIAmbassadorException e) {
 			log.error(e);
 		}
@@ -225,7 +225,7 @@ public class InjectionFederate implements Runnable {
 			try {
 				switch (state) {
 				case TERMINATING:
-					synchronize(READY_TO_RESIGN);
+					synchronize(SynchronizationPoints.ReadyToResign);
 					resignFederationExecution();
 					break;
 				case JOINED:
@@ -429,16 +429,16 @@ public class InjectionFederate implements Runnable {
 				log.error("Continuing", e);
 			}
 		}
-//		for (InteractionClassType classType : getInteractionPublish()) {
-//			log.info("creating HLA publication for the interaction=" + classType.getName().getValue());
-//			try {
-//				handle = rtiAmb.getInteractionClassHandle(classType.getName().getValue());
-//				rtiAmb.publishInteractionClass(handle);
-//			} catch (NameNotFound | FederateNotExecutionMember | RTIinternalError | InteractionClassNotDefined
-//					| SaveInProgress | RestoreInProgress | ConcurrentAccessAttempted e) {
-//				log.error("Continuing", e);
-//			}
-//		}
+		for (InteractionClassType classType : getInteractionPublish()) {
+			log.info("creating HLA publication for the interaction=" + classType.getName().getValue());
+			try {
+				handle = rtiAmb.getInteractionClassHandle(classType.getName().getValue());
+				rtiAmb.publishInteractionClass(handle);
+			} catch (NameNotFound | FederateNotExecutionMember | RTIinternalError | InteractionClassNotDefined
+					| SaveInProgress | RestoreInProgress | ConcurrentAccessAttempted e) {
+				log.error("Continuing", e);
+			}
+		}
 		for (ObjectClassType classType : getObjectSubscribe()) {
 			log.info("creating HLA subscription for the object=" + classType.getName().getValue());
 			try {
@@ -456,24 +456,24 @@ public class InjectionFederate implements Runnable {
 				log.error("Continuing", e);
 			}
 		}
-//		for (ObjectClassType classType : getObjectPublish()) {
-//			log.info("creating HLA publication for the object=" + classType.getName().getValue());
-//			try {
-//				String className = formatObjectName(classType.getName().getValue());
-//				int classHandle = rtiAmb.getObjectClassHandle(className);
-//				log.info("creating HLA publication for the object1=" + className);
-//				AttributeHandleSet attributes = RtiFactoryFactory.getRtiFactory().createAttributeHandleSet();
-//				for (AttributeType1 attribute : classType.getAttribute()) {
-//					int attributeHandle = rtiAmb.getAttributeHandle(attribute.getName().getValue(), classHandle);
-//					attributes.add(attributeHandle);
-//				}
-//				rtiAmb.publishObjectClass(classHandle, attributes);
-//			} catch (NameNotFound | FederateNotExecutionMember | RTIinternalError | SaveInProgress | RestoreInProgress
-//					| ConcurrentAccessAttempted | ObjectClassNotDefined | AttributeNotDefined
-//					| OwnershipAcquisitionPending e) {
-//				log.error("Continuing", e);
-//			}
-//		}
+		for (ObjectClassType classType : getObjectPublish()) {
+			log.info("creating HLA publication for the object=" + classType.getName().getValue());
+			try {
+				String className = formatObjectName(classType.getName().getValue());
+				int classHandle = rtiAmb.getObjectClassHandle(className);
+				log.info("creating HLA publication for the object1=" + className);
+				AttributeHandleSet attributes = RtiFactoryFactory.getRtiFactory().createAttributeHandleSet();
+				for (AttributeType1 attribute : classType.getAttribute()) {
+					int attributeHandle = rtiAmb.getAttributeHandle(attribute.getName().getValue(), classHandle);
+					attributes.add(attributeHandle);
+				}
+				rtiAmb.publishObjectClass(classHandle, attributes);
+			} catch (NameNotFound | FederateNotExecutionMember | RTIinternalError | SaveInProgress | RestoreInProgress
+					| ConcurrentAccessAttempted | ObjectClassNotDefined | AttributeNotDefined
+					| OwnershipAcquisitionPending e) {
+				log.error("Continuing", e);
+			}
+		}
 	}
 
 	public void injectInteraction(InterObjDef def, Double logicalTime) {
@@ -689,7 +689,7 @@ public class InjectionFederate implements Runnable {
 
 	private void synchronize(String label) throws RTIAmbassadorException {
 		log.info("waiting for announcement of the synchronization point " + label);
-		while (!fedAmb.isSynchronizationPointPending(label)) {
+		while (fedAmb.isSynchronizationPointPending(label)) {
 			tick();
 		}
 
@@ -700,7 +700,7 @@ public class InjectionFederate implements Runnable {
 		}
 
 		log.info("waiting for federation to synchronize on synchronization point " + label);
-		while (fedAmb.isSynchronizationPointPending(label)) {
+		while (!fedAmb.isSynchronizationPointPending(label)) {
 			processIntObjs(null);
 			tick();
 		}

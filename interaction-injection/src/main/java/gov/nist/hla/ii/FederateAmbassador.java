@@ -3,6 +3,8 @@ package gov.nist.hla.ii;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -58,11 +60,14 @@ public class FederateAmbassador extends NullFederateAmbassador {
 	}
 
 	// synchronization point labels that have been announced but not achieved
-	private HashSet<String> pendingSynchronizationPoints = new HashSet<String>();
+	private Set<String> pendingSynchronizationPoints = new HashSet<String>();
 
+	private Set<String> _achievedSynchronizationPoints = new HashSet<String>();
+
+	
 	// map the handle for a discovered object instance to its associated
 	// ObjectDetails
-	private HashMap<Integer, ObjectDetails> objectInstances = new HashMap<Integer, ObjectDetails>();
+	private Map<Integer, ObjectDetails> objectInstances = new HashMap<Integer, ObjectDetails>();
 
 	// names of previously discovered object instances that have since been
 	// removed
@@ -89,6 +94,7 @@ public class FederateAmbassador extends NullFederateAmbassador {
 
 	public void federationSynchronized(String synchronizationPointLabel) throws FederateInternalError {
 		pendingSynchronizationPoints.remove(synchronizationPointLabel);
+        _achievedSynchronizationPoints.add(synchronizationPointLabel);
 		log.info("synchronization point achieved: " + synchronizationPointLabel);
 	}
 
