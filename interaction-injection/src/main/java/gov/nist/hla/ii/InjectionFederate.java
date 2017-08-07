@@ -15,7 +15,6 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.cpswt.hla.SynchronizationPoints;
-import org.cpswt.hla.SynchronizedFederate;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.ieee.standards.ieee1516._2010.AttributeType1;
 import org.ieee.standards.ieee1516._2010.DocumentRoot;
@@ -71,9 +70,9 @@ public class InjectionFederate implements Runnable {
 	private static final Logger log = LogManager.getLogger(InjectionFederate.class);
 
 	private static final String SIMULATION_END = "InteractionRoot.C2WInteractionRoot.SimulationControl.SimEnd";
-	private static final String READY_TO_POPULATE = "readyToPopulate";
-	private static final String READY_TO_RUN = "readyToRun";
-	private static final String READY_TO_RESIGN = "readyToResign";
+	// private static final String READY_TO_POPULATE = "readyToPopulate";
+	// private static final String READY_TO_RUN = "readyToRun";
+	// private static final String READY_TO_RESIGN = "readyToResign";
 
 	private static final int MAX_JOIN_ATTEMPTS = 6;
 	private static final int REJOIN_DELAY_MS = 10000;
@@ -86,7 +85,7 @@ public class InjectionFederate implements Runnable {
 	}
 
 	private State state = State.CONSTRUCTED;
-	private Double newLogicalTime = 0D;
+	private Double currTime = 0D;
 
 	private Map<String, Integer> registeredObjects = new HashMap<String, Integer>();
 
@@ -216,7 +215,7 @@ public class InjectionFederate implements Runnable {
 			while (state != State.TERMINATING) {
 
 				handleMessages();
-				processIntObjs(newLogicalTime);
+				processIntObjs(currTime);
 				advanceLogicalTime();
 			}
 		} catch (RTIAmbassadorException e) {
@@ -240,12 +239,12 @@ public class InjectionFederate implements Runnable {
 		}
 	}
 
-	private void processIntObjs(Double newLogicalTime) {
+	private void processIntObjs(Double currTime) {
 		Queue<InterObjDef> interactions = null;
-		if (newLogicalTime == null) {
+		if (currTime == null) {
 			interactions = interObjectInjection.getPreSynchInteractions();
 		} else {
-			interactions = interObjectInjection.getPublications(newLogicalTime);
+			interactions = interObjectInjection.getPublications(currTime);
 		}
 
 		InterObjDef def = null;
@@ -254,20 +253,23 @@ public class InjectionFederate implements Runnable {
 			if (def.getType() == InterObjDef.TYPE.OBJECT) {
 				updateObject(def);
 			} else {
-				injectInteraction(def, newLogicalTime);
+				injectInteraction(def, currTime);
 			}
 		}
 	}
 
 	private void handleMessages() throws RTIAmbassadorException {
+
+		boolean receivedNothing = true;
 		try {
 			Interaction receivedInteraction;
 			while ((receivedInteraction = fedAmb.nextInteraction()) != null) {
 				// log.trace("receivedInteraction=" + receivedInteraction);
+				receivedNothing = false;
 				int interactionHandle = receivedInteraction.getInteractionClassHandle();
 				String interactionName = rtiAmb.getInteractionClassName(interactionHandle);
 				Map<String, String> parameters = mapParameters(receivedInteraction);
-				interObjectReception.receiveInteraction(newLogicalTime, interactionName, parameters);
+				interObjectReception.receiveInteraction(currTime, interactionName, parameters);
 
 				if (interactionName.equals(SIMULATION_END)) {
 					changeState(State.TERMINATING);
@@ -278,11 +280,12 @@ public class InjectionFederate implements Runnable {
 			while ((receivedObjectReflection = fedAmb.nextObjectReflection()) != null) {
 				// log.trace("receivedObjectReflection=" +
 				// receivedObjectReflection);
+				receivedNothing = false;
 				int objectClassHandle = receivedObjectReflection.getObjectClass();
 				String objectClassName = rtiAmb.getObjectClassName(objectClassHandle);
 				String objectName = receivedObjectReflection.getObjectName();
 				Map<String, String> parameters = mapAttributes(objectClassHandle, receivedObjectReflection);
-				interObjectReception.receiveObject(newLogicalTime, objectClassName, objectName, parameters);
+				interObjectReception.receiveObject(currTime, objectClassName, objectName, parameters);
 			}
 
 			String removedObjectName;
@@ -293,9 +296,25 @@ public class InjectionFederate implements Runnable {
 					log.info("deleting context broker entity with id=" + removedObjectName);
 				}
 			}
+
+			if (receivedNothing && !advancing.get()) {
+				LogicalTime ft = getRtiAmb().queryFederateTime();
+				DoubleTime dt = new DoubleTime(currTime);
+				boolean lt = dt.isLessThan(ft);
+				boolean eq = dt.isEqualTo(ft);
+				boolean gt = dt.isGreaterThan(ft);
+				interObjectReception.receiveInteraction(currTime,
+						String.format("lt=%b eq=%b gt=%b %s %s", lt, eq, gt, ft.toString(), "Nothing received!!"),
+						new HashMap<String, String>());
+			}
 		} catch (RTIexception e) {
 			throw new RTIAmbassadorException(e);
 		}
+	}
+
+	boolean isEmptyStep(LogicalTime fedTime) {
+
+		return new DoubleTime(currTime).isLessThan(fedTime);
 	}
 
 	Map<String, String> mapParameters(Interaction receivedInteraction) {
@@ -338,7 +357,7 @@ public class InjectionFederate implements Runnable {
 		} catch (RTIexception e) {
 			throw new RTIAmbassadorException(e);
 		}
-		handleMessages();
+		// handleMessages("lo");
 	}
 
 	private void joinFederationExecution() throws InterruptedException, RTIAmbassadorException {
@@ -545,9 +564,11 @@ public class InjectionFederate implements Runnable {
 		try {
 			classHandle = getRtiAmb().getObjectClassHandle(def.getName());
 			objectHandle = getRtiAmb().registerObjectInstance(classHandle);
-//			objectHandle = registeredObjects.get(def.getName());
+			// objectHandle = registeredObjects.get(def.getName());
 			updateObject(classHandle, objectHandle, def.getParameters());
-		} catch (NullPointerException | FederateNotExecutionMember | RTIinternalError | NameNotFound | ObjectClassNotDefined | ObjectClassNotPublished | SaveInProgress | RestoreInProgress | ConcurrentAccessAttempted e) {
+		} catch (NullPointerException | FederateNotExecutionMember | RTIinternalError | NameNotFound
+				| ObjectClassNotDefined | ObjectClassNotPublished | SaveInProgress | RestoreInProgress
+				| ConcurrentAccessAttempted e) {
 			log.debug("registeredObjects=" + registeredObjects);
 			log.debug("def=" + def);
 			log.debug("classHandle=" + classHandle);
@@ -679,9 +700,9 @@ public class InjectionFederate implements Runnable {
 		}
 	}
 
-//	private double getLbts() {
-//		return fedAmb.getFederateTime() + fedAmb.getFederateLookahead();
-//	}
+	// private double getLbts() {
+	// return fedAmb.getFederateTime() + fedAmb.getFederateLookahead();
+	// }
 
 	private byte[] generateTag() {
 		return ("" + System.currentTimeMillis()).getBytes();
@@ -709,11 +730,11 @@ public class InjectionFederate implements Runnable {
 
 	public Double advanceLogicalTime() throws RTIAmbassadorException {
 		advancing.set(true);
-		newLogicalTime = fedAmb.getLogicalTime() + stepsize;
-		log.info("advancing logical time to " + newLogicalTime);
+		currTime = fedAmb.getLogicalTime() + stepsize;
+		log.info("advancing logical time to " + currTime);
 		try {
 			fedAmb.setTimeAdvancing();
-			rtiAmb.timeAdvanceRequest(new DoubleTime(newLogicalTime));
+			rtiAmb.timeAdvanceRequest(new DoubleTime(currTime));
 		} catch (RTIexception e) {
 			throw new RTIAmbassadorException(e);
 		}
@@ -722,7 +743,7 @@ public class InjectionFederate implements Runnable {
 		}
 		log.info("advanced logical time to " + fedAmb.getLogicalTime());
 		advancing.set(false);
-		return newLogicalTime;
+		return currTime;
 	}
 
 	private void resignFederationExecution() throws RTIAmbassadorException {
@@ -844,6 +865,15 @@ public class InjectionFederate implements Runnable {
 
 	public double startLogicalTime() {
 		advancing.set(true);
-		return newLogicalTime;
+		return currTime;
 	}
+
+	Double getCurrTime() {
+		return currTime;
+	}
+
+	void setCurrTime(Double currTime) {
+		this.currTime = currTime;
+	}
+
 }
