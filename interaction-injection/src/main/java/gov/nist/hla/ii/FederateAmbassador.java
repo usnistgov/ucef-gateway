@@ -80,7 +80,7 @@ public class FederateAmbassador extends NullFederateAmbassador {
 	private boolean isTimeRegulating = false;
 	private boolean isTimeConstrained = false;
 
-	private double logicalTime = 0;
+	private double logicalTime = 0D;
 
 	public void announceSynchronizationPoint(String synchronizationPointLabel, byte[] userSuppliedTag)
 			throws FederateInternalError {
@@ -142,7 +142,7 @@ public class FederateAmbassador extends NullFederateAmbassador {
 		if (objectInstances.get(theObject) == null) {
 			objectInstances.put(theObject, new ObjectDetails(theObject, theObjectClass, objectName));
 		} else {
-			log.warn(String.format("Already discovered: theObject=%d theObjectClass=%d objectName=%s", theObject,
+			log.info(String.format("Already discovered: theObject=%d theObjectClass=%d objectName=%s its ok carry on", theObject,
 					theObjectClass, objectName));
 		}
 	}

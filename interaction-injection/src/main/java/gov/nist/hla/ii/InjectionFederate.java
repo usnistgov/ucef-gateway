@@ -211,7 +211,7 @@ public class InjectionFederate implements Runnable {
 			log.error(e);
 		}
 		try {
-			log.trace("enter while==>");
+			log.info("enter while==>");
 			while (state != State.TERMINATING) {
 
 				handleMessages();
@@ -312,10 +312,10 @@ public class InjectionFederate implements Runnable {
 		}
 	}
 
-	boolean isEmptyStep(LogicalTime fedTime) {
-
-		return new DoubleTime(currTime).isLessThan(fedTime);
-	}
+//	boolean isEmptyStep(LogicalTime fedTime) {
+//
+//		return new DoubleTime(currTime).isLessThan(fedTime);
+//	}
 
 	Map<String, String> mapParameters(Interaction receivedInteraction) {
 		int interactionHandle = receivedInteraction.getInteractionClassHandle();
@@ -510,7 +510,7 @@ public class InjectionFederate implements Runnable {
 				rtiAmb.sendInteraction(interactionHandle, suppliedParameters, generateTag());
 			} else {
 				LogicalTimeFactory ltf = new DoubleTimeFactory();
-				LogicalTime lt = ltf.decode(this.convertToByteArray(logicalTime), 0);
+				LogicalTime lt = ltf.decode(this.convertToByteArray(logicalTime + lookahead), 0);
 				rtiAmb.sendInteraction(interactionHandle, suppliedParameters, generateTag(), lt);
 			}
 		} catch (NameNotFound | FederateNotExecutionMember | RTIinternalError e) {
@@ -722,6 +722,7 @@ public class InjectionFederate implements Runnable {
 
 		log.info("waiting for federation to synchronize on synchronization point " + label);
 		while (!fedAmb.isSynchronizationPointPending(label)) {
+			handleMessages();
 			processIntObjs(null);
 			tick();
 		}
@@ -753,6 +754,31 @@ public class InjectionFederate implements Runnable {
 		} catch (RTIexception e) {
 			throw new RTIAmbassadorException(e);
 		}
+	}
+
+	public double getLBTS() {
+		LogicalTime lbtsTime = null;
+		boolean timeNotAcquired = true;
+		while (timeNotAcquired) {
+			try {
+				synchronized (rtiAmb) {
+					lbtsTime = rtiAmb.queryLBTS();
+				}
+				timeNotAcquired = false;
+			} catch (FederateNotExecutionMember f) {
+				log.error("SynchronizedFederate:  getLBTS:  ERROR:  Federate not execution member");
+				log.error(f);
+				return -1;
+			} catch (Exception e) {
+				log.error("SynchronizedFederate:  getLBTS:  Exception caught:  " + e.getMessage());
+				log.error(e);
+				return -1;
+			}
+		}
+
+		DoubleTime doubleTime = new DoubleTime();
+		doubleTime.setTo(lbtsTime);
+		return doubleTime.getTime();
 	}
 
 	public Set<InteractionClassType> getInteractionSubscribe() {
