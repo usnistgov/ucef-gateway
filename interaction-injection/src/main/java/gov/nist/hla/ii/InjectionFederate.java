@@ -70,9 +70,6 @@ public class InjectionFederate implements Runnable {
 	private static final Logger log = LogManager.getLogger(InjectionFederate.class);
 
 	private static final String SIMULATION_END = "InteractionRoot.C2WInteractionRoot.SimulationControl.SimEnd";
-	// private static final String READY_TO_POPULATE = "readyToPopulate";
-	// private static final String READY_TO_RUN = "readyToRun";
-	// private static final String READY_TO_RESIGN = "readyToResign";
 
 	private static final int MAX_JOIN_ATTEMPTS = 6;
 	private static final int REJOIN_DELAY_MS = 10000;
@@ -312,11 +309,6 @@ public class InjectionFederate implements Runnable {
 		}
 	}
 
-//	boolean isEmptyStep(LogicalTime fedTime) {
-//
-//		return new DoubleTime(currTime).isLessThan(fedTime);
-//	}
-
 	Map<String, String> mapParameters(Interaction receivedInteraction) {
 		int interactionHandle = receivedInteraction.getInteractionClassHandle();
 		Map<String, String> parameters = null;
@@ -357,7 +349,7 @@ public class InjectionFederate implements Runnable {
 		} catch (RTIexception e) {
 			throw new RTIAmbassadorException(e);
 		}
-		// handleMessages("lo");
+		// handleMessages();
 	}
 
 	private void joinFederationExecution() throws InterruptedException, RTIAmbassadorException {
@@ -564,7 +556,6 @@ public class InjectionFederate implements Runnable {
 		try {
 			classHandle = getRtiAmb().getObjectClassHandle(def.getName());
 			objectHandle = getRtiAmb().registerObjectInstance(classHandle);
-			// objectHandle = registeredObjects.get(def.getName());
 			updateObject(classHandle, objectHandle, def.getParameters());
 		} catch (NullPointerException | FederateNotExecutionMember | RTIinternalError | NameNotFound
 				| ObjectClassNotDefined | ObjectClassNotPublished | SaveInProgress | RestoreInProgress
@@ -699,10 +690,6 @@ public class InjectionFederate implements Runnable {
 			log.error("", e);
 		}
 	}
-
-	// private double getLbts() {
-	// return fedAmb.getFederateTime() + fedAmb.getFederateLookahead();
-	// }
 
 	private byte[] generateTag() {
 		return ("" + System.currentTimeMillis()).getBytes();
