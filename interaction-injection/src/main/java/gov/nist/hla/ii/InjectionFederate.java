@@ -82,7 +82,7 @@ public class InjectionFederate implements Runnable {
 	}
 
 	private State state = State.CONSTRUCTED;
-	private Double currTime = 0D;
+	private Double currTime;
 
 	private Map<String, Integer> registeredObjects = new HashMap<String, Integer>();
 
@@ -162,7 +162,6 @@ public class InjectionFederate implements Runnable {
 			enableTimeConstrained();
 			enableTimeRegulation();
 			publishAndSubscribe();
-
 		} catch (InterruptedException | RTIAmbassadorException e) {
 			log.error(e);
 		}
@@ -208,7 +207,7 @@ public class InjectionFederate implements Runnable {
 			log.error(e);
 		}
 		try {
-			log.info("enter while==>");
+			log.info("enter while==>" + state.name());
 			while (state != State.TERMINATING) {
 
 				handleMessages();
@@ -296,7 +295,7 @@ public class InjectionFederate implements Runnable {
 
 			if (receivedNothing && !advancing.get()) {
 				LogicalTime ft = getRtiAmb().queryFederateTime();
-				DoubleTime dt = new DoubleTime(currTime);
+				DoubleTime dt = new DoubleTime((currTime == null) ? 0D : currTime);
 				boolean lt = dt.isLessThan(ft);
 				boolean eq = dt.isEqualTo(ft);
 				boolean gt = dt.isGreaterThan(ft);
@@ -349,7 +348,6 @@ public class InjectionFederate implements Runnable {
 		} catch (RTIexception e) {
 			throw new RTIAmbassadorException(e);
 		}
-		// handleMessages();
 	}
 
 	private void joinFederationExecution() throws InterruptedException, RTIAmbassadorException {
@@ -709,8 +707,6 @@ public class InjectionFederate implements Runnable {
 
 		log.info("waiting for federation to synchronize on synchronization point " + label);
 		while (!fedAmb.isSynchronizationPointPending(label)) {
-			handleMessages();
-			processIntObjs(null);
 			tick();
 		}
 		log.info("federation synchronized on " + label);
