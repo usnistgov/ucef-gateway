@@ -142,7 +142,7 @@ public class FederateAmbassador extends NullFederateAmbassador {
 		if (objectInstances.get(theObject) == null) {
 			objectInstances.put(theObject, new ObjectDetails(theObject, theObjectClass, objectName));
 		} else {
-			log.info(String.format("Already discovered: theObject=%d theObjectClass=%d objectName=%s its ok carry on", theObject,
+			log.debug(String.format("Already discovered: theObject=%d theObjectClass=%d objectName=%s its ok carry on", theObject,
 					theObjectClass, objectName));
 		}
 	}

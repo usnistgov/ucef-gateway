@@ -200,12 +200,16 @@ public class InjectionFederate implements Runnable {
 
 	public void run() {
 		log.trace("run==>");
-		try {
-			synchronize(SynchronizationPoints.ReadyToPopulate);
-			synchronize(SynchronizationPoints.ReadyToRun);
-		} catch (RTIAmbassadorException e) {
-			log.error(e);
-		}
+//		try {
+//			synchronize(SynchronizationPoints.ReadyToPopulate);
+//		} catch (RTIAmbassadorException e) {
+//			log.error(e);
+//		}
+//		try {
+//			synchronize(SynchronizationPoints.ReadyToRun);
+//		} catch (RTIAmbassadorException e) {
+//			log.error(e);
+//		}
 		try {
 			log.info("enter while==>" + state.name());
 			while (state != State.TERMINATING) {
@@ -700,7 +704,10 @@ public class InjectionFederate implements Runnable {
 		}
 
 		try {
-			rtiAmb.synchronizationPointAchieved(label);
+			// rtiAmb.synchronizationPointAchieved(label);
+			synchronized (rtiAmb) {
+				rtiAmb.synchronizationPointAchieved(label);
+			}
 		} catch (RTIexception e) {
 			throw new RTIAmbassadorException(e);
 		}
