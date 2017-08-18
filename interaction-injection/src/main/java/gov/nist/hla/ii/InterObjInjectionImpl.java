@@ -48,4 +48,13 @@ public abstract class InterObjInjectionImpl implements InterObjInjection {
 	private void addInterObj(InterObjDef def) {
 		publications.add(def);
 	}
+
+	@Override
+	public void afterReadytoPopulate() {}
+
+	@Override
+	public void afterReadytoRun() {}
+
+	@Override
+	public void afterAdvanceLogicalTime() {}
 }

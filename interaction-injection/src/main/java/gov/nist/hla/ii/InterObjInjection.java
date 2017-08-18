@@ -17,4 +17,10 @@ public interface InterObjInjection {
 	public void addObject(String objectName, Map<String, String> attributes) throws NameNotFound, FederateNotExecutionMember, RTIinternalError, ObjectNotKnown;
 
 	public void addInteraction(String interactionName, Map<String, String> parameters);
+
+	public void afterReadytoPopulate();
+
+	public void afterReadytoRun();
+	
+	public void afterAdvanceLogicalTime();
 }

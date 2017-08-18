@@ -109,6 +109,8 @@ public class InjectionFederate implements Runnable {
 
 	private InterObjReception interObjectReception;
 
+	private TimeStepHook timeStepHook;
+	
 	private AtomicBoolean advancing = new AtomicBoolean(false);
 
 	public String getFomFilePath() {
@@ -148,7 +150,7 @@ public class InjectionFederate implements Runnable {
 		}
 		fedAmb = new FederateAmbassador();
 	}
-
+	
 	public void init() {
 		if (state != State.INITIALIZED) {
 			throw new IllegalStateException("execute cannot be called in the current state: " + state.name());
@@ -200,23 +202,33 @@ public class InjectionFederate implements Runnable {
 
 	public void run() {
 		log.trace("run==>");
-//		try {
-//			synchronize(SynchronizationPoints.ReadyToPopulate);
-//		} catch (RTIAmbassadorException e) {
-//			log.error(e);
-//		}
-//		try {
-//			synchronize(SynchronizationPoints.ReadyToRun);
-//		} catch (RTIAmbassadorException e) {
-//			log.error(e);
-//		}
+		try {
+			timeStepHook.beforeReadytoPopulate();
+			synchronize(SynchronizationPoints.ReadyToPopulate);
+			timeStepHook.afterReadytoPopulate();
+		} catch (RTIAmbassadorException e) {
+			log.error(e);
+		}
+		
+		try {
+			timeStepHook.beforeReadytoRun();
+			synchronize(SynchronizationPoints.ReadyToRun);
+			timeStepHook.afterReadytoRun();
+		} catch (RTIAmbassadorException e) {
+			log.error(e);
+		}
+
 		try {
 			log.info("enter while==>" + state.name());
 			while (state != State.TERMINATING) {
 
 				handleMessages();
 				processIntObjs(currTime);
+				
+				timeStepHook.beforeAdvanceLogicalTime();
 				advanceLogicalTime();
+				timeStepHook.afterAdvanceLogicalTime();
+
 			}
 		} catch (RTIAmbassadorException e) {
 			log.error(e);
@@ -864,6 +876,14 @@ public class InjectionFederate implements Runnable {
 
 	public void setInterObjectReception(InterObjReception interObjectReception) {
 		this.interObjectReception = interObjectReception;
+	}
+
+	public TimeStepHookImpl getTimeStepHook() {
+		return timeStepHook;
+	}
+
+	public void setTimeStepHook(TimeStepHook timeStepHook) {
+		this.timeStepHook = timeStepHook;
 	}
 
 	public AtomicBoolean getAdvancing() {
