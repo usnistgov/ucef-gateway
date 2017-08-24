@@ -22,7 +22,7 @@ The three capabilities:
      c. Before and after each time step  
 
 ## Prerequisites
-The UCEF Gateway cannot send interactios that are not designed by WebGME.  The gateway must have a complete set of the interactions in the form of a FOM (Federation Object Model) file.  A FOM is generated for any federate designed with WebGME.
+The UCEF Gateway cannot send interactions that are not designed by WebGME.  The gateway must have a complete set of the interactions in the form of a FOM (Federation Object Model) file.  A FOM is generated for any federate designed with WebGME.
 
 ## Configuration
 Configuration is a properties file that must be located in the src/main/resources directory of the Implementation Project.  Usage is commented therein. 
