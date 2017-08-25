@@ -878,7 +878,7 @@ public class InjectionFederate implements Runnable {
 		this.interObjectReception = interObjectReception;
 	}
 
-	public TimeStepHookImpl getTimeStepHook() {
+	public TimeStepHook getTimeStepHook() {
 		return timeStepHook;
 	}
 
