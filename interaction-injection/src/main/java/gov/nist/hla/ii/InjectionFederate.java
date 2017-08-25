@@ -358,7 +358,7 @@ public class InjectionFederate implements Runnable {
 		return attributes;
 	}
 
-	private void tick() throws RTIAmbassadorException {
+	public void tick() throws RTIAmbassadorException {
 		try {
 			rtiAmb.tick();
 		} catch (RTIexception e) {
