@@ -8,6 +8,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -39,6 +40,7 @@ import hla.rti.AttributeNotOwned;
 import hla.rti.ConcurrentAccessAttempted;
 import hla.rti.EnableTimeConstrainedPending;
 import hla.rti.EnableTimeRegulationPending;
+import hla.rti.FederateAlreadyExecutionMember;
 import hla.rti.FederateLoggingServiceCalls;
 import hla.rti.FederateNotExecutionMember;
 import hla.rti.FederationExecutionDoesNotExist;
@@ -82,7 +84,7 @@ public class InjectionFederate implements Runnable {
 	}
 
 	private State state = State.CONSTRUCTED;
-	private Double currTime;
+	private Double logicalTime;
 
 	private Map<String, Integer> registeredObjects = new HashMap<String, Integer>();
 
@@ -110,7 +112,7 @@ public class InjectionFederate implements Runnable {
 	private InterObjReception interObjectReception;
 
 	private TimeStepHook timeStepHook;
-	
+
 	private AtomicBoolean advancing = new AtomicBoolean(false);
 
 	public String getFomFilePath() {
@@ -150,8 +152,9 @@ public class InjectionFederate implements Runnable {
 		}
 		fedAmb = new FederateAmbassador();
 	}
-	
+
 	public void init() {
+		log.trace("init==>");
 		if (state != State.INITIALIZED) {
 			throw new IllegalStateException("execute cannot be called in the current state: " + state.name());
 		}
@@ -164,9 +167,19 @@ public class InjectionFederate implements Runnable {
 			enableTimeConstrained();
 			enableTimeRegulation();
 			publishAndSubscribe();
+			
+			String interactionName = formatInteractionName("FederateJoinInteraction");
+			Map<String, String> params = new HashMap<String, String>();
+			String federateType = "GatewayMain";
+			String federateId = String.format("%s-%s", "GatewayMain", UUID.randomUUID());
+			params.put("FederateId", String.format("%s@%f", federateId, logicalTime));
+			params.put("FederateType", String.format("%s@%f", federateType, logicalTime));
+			params.put("IsLateJoiner", "false");
+			injectInteraction(interactionName, params, logicalTime);			
 		} catch (InterruptedException | RTIAmbassadorException e) {
 			log.error(e);
 		}
+		log.trace("<==init");
 	}
 
 	public void loadConfiguration(String filepath) throws IOException, PropertyNotFound, PropertyNotAssigned {
@@ -174,7 +187,7 @@ public class InjectionFederate implements Runnable {
 			throw new IllegalStateException("loadConfiguration cannot be called in the current state: " + state.name());
 		}
 
-		log.debug("loading FIWARE federate configuration");
+		log.debug("loading injection federate configuration");
 		Configuration configuration = new Configuration(filepath);
 
 		federateName = configuration.getRequiredProperty("federate-name");
@@ -202,6 +215,7 @@ public class InjectionFederate implements Runnable {
 
 	public void run() {
 		log.trace("run==>");
+
 		try {
 			timeStepHook.beforeReadytoPopulate();
 			synchronize(SynchronizationPoints.ReadyToPopulate);
@@ -209,7 +223,7 @@ public class InjectionFederate implements Runnable {
 		} catch (RTIAmbassadorException e) {
 			log.error(e);
 		}
-		
+
 		try {
 			timeStepHook.beforeReadytoRun();
 			synchronize(SynchronizationPoints.ReadyToRun);
@@ -223,8 +237,8 @@ public class InjectionFederate implements Runnable {
 			while (state != State.TERMINATING) {
 
 				handleMessages();
-				processIntObjs(currTime);
-				
+				processIntObjs(logicalTime);
+
 				timeStepHook.beforeAdvanceLogicalTime();
 				advanceLogicalTime();
 				timeStepHook.afterAdvanceLogicalTime();
@@ -249,14 +263,15 @@ public class InjectionFederate implements Runnable {
 				log.warn("failed to resign federation execution", e);
 			}
 		}
+		log.trace("<==run");
 	}
 
-	private void processIntObjs(Double currTime) {
+	private void processIntObjs(Double logicalTime) {
 		Queue<InterObjDef> interactions = null;
-		if (currTime == null) {
+		if (logicalTime == null) {
 			interactions = interObjectInjection.getPreSynchInteractions();
 		} else {
-			interactions = interObjectInjection.getPublications(currTime);
+			interactions = interObjectInjection.getPublications(logicalTime);
 		}
 
 		InterObjDef def = null;
@@ -265,7 +280,7 @@ public class InjectionFederate implements Runnable {
 			if (def.getType() == InterObjDef.TYPE.OBJECT) {
 				updateObject(def);
 			} else {
-				injectInteraction(def, currTime);
+				injectInteraction(def, logicalTime);
 			}
 		}
 	}
@@ -281,7 +296,7 @@ public class InjectionFederate implements Runnable {
 				int interactionHandle = receivedInteraction.getInteractionClassHandle();
 				String interactionName = rtiAmb.getInteractionClassName(interactionHandle);
 				Map<String, String> parameters = mapParameters(receivedInteraction);
-				interObjectReception.receiveInteraction(currTime, interactionName, parameters);
+				interObjectReception.receiveInteraction(logicalTime, interactionName, parameters);
 
 				if (interactionName.equals(SIMULATION_END)) {
 					changeState(State.TERMINATING);
@@ -297,7 +312,7 @@ public class InjectionFederate implements Runnable {
 				String objectClassName = rtiAmb.getObjectClassName(objectClassHandle);
 				String objectName = receivedObjectReflection.getObjectName();
 				Map<String, String> parameters = mapAttributes(objectClassHandle, receivedObjectReflection);
-				interObjectReception.receiveObject(currTime, objectClassName, objectName, parameters);
+				interObjectReception.receiveObject(logicalTime, objectClassName, objectName, parameters);
 			}
 
 			String removedObjectName;
@@ -311,11 +326,11 @@ public class InjectionFederate implements Runnable {
 
 			if (receivedNothing && !advancing.get()) {
 				LogicalTime ft = getRtiAmb().queryFederateTime();
-				DoubleTime dt = new DoubleTime((currTime == null) ? 0D : currTime);
+				DoubleTime dt = new DoubleTime((logicalTime == null) ? 0D : logicalTime);
 				boolean lt = dt.isLessThan(ft);
 				boolean eq = dt.isEqualTo(ft);
 				boolean gt = dt.isGreaterThan(ft);
-				interObjectReception.receiveInteraction(currTime,
+				interObjectReception.receiveInteraction(logicalTime,
 						String.format("lt=%b eq=%b gt=%b %s %s", lt, eq, gt, ft.toString(), "Nothing received!!"),
 						new HashMap<String, String>());
 			}
@@ -368,6 +383,21 @@ public class InjectionFederate implements Runnable {
 
 	private void joinFederationExecution() throws InterruptedException, RTIAmbassadorException {
 		boolean joinSuccessful = false;
+log.trace("Trying to join...	");
+//		String interactionName = formatInteractionName("FederateJoinInteraction");
+//		Map<String, String> params = new HashMap<String, String>();
+//		String federateType = "GatewayMain";
+//		String federateId = String.format("%s-%s", "GatewayMain", UUID.randomUUID());
+//		params.put("FederateId", String.format("%s@%f", federateId, logicalTime));
+//		params.put("FederateType", String.format("%s@%f", federateType, logicalTime));
+//		params.put("IsLateJoiner", "false");
+//		 params.put("actualLogicalGenerationTime", String.format("%f",
+//		 logicalTime));
+//		 params.put("federateFilter", String.format("%s@%f", "YYY",
+//		 logicalTime));
+//		 params.put("originFed", String.format("%s@%f", "YYY", logicalTime));
+//		 params.put("sourceFed", String.format("%s@%f", "YYY", logicalTime));
+//		injectInteraction(interactionName, params, logicalTime);
 
 		for (int i = 0; !joinSuccessful && i < MAX_JOIN_ATTEMPTS; i++) {
 			if (i > 0) {
@@ -375,19 +405,14 @@ public class InjectionFederate implements Runnable {
 				Thread.sleep(REJOIN_DELAY_MS);
 			}
 
+			log.info("joining federation " + federationName + " as " + federateName + " (" + i + ")");
 			try {
-				log.info("joining federation " + federationName + " as " + federateName + " (" + i + ")");
 				rtiAmb.joinFederationExecution(federateName, federationName, fedAmb, null);
-				joinSuccessful = true;
-			} catch (FederationExecutionDoesNotExist e) {
-				log.warn("federation execution does not exist: " + federationName);
-			} catch (SaveInProgress e) {
-				log.warn("failed to join federation: save in progress");
-			} catch (RestoreInProgress e) {
-				log.warn("failed to join federation: restore in progress");
-			} catch (RTIexception e) {
-				throw new RTIAmbassadorException(e);
+			} catch (FederateAlreadyExecutionMember | FederationExecutionDoesNotExist | SaveInProgress
+					| RestoreInProgress | RTIinternalError | ConcurrentAccessAttempted e) {
+				log.error("", e);
 			}
+			joinSuccessful = true;
 		}
 	}
 
@@ -716,7 +741,6 @@ public class InjectionFederate implements Runnable {
 		}
 
 		try {
-			// rtiAmb.synchronizationPointAchieved(label);
 			synchronized (rtiAmb) {
 				rtiAmb.synchronizationPointAchieved(label);
 			}
@@ -733,11 +757,11 @@ public class InjectionFederate implements Runnable {
 
 	public Double advanceLogicalTime() throws RTIAmbassadorException {
 		advancing.set(true);
-		currTime = fedAmb.getLogicalTime() + stepsize;
-		log.info("advancing logical time to " + currTime);
+		logicalTime = fedAmb.getLogicalTime() + stepsize;
+		log.info("advancing logical time to " + logicalTime);
 		try {
 			fedAmb.setTimeAdvancing();
-			rtiAmb.timeAdvanceRequest(new DoubleTime(currTime));
+			rtiAmb.timeAdvanceRequest(new DoubleTime(logicalTime));
 		} catch (RTIexception e) {
 			throw new RTIAmbassadorException(e);
 		}
@@ -746,7 +770,7 @@ public class InjectionFederate implements Runnable {
 		}
 		log.info("advanced logical time to " + fedAmb.getLogicalTime());
 		advancing.set(false);
-		return currTime;
+		return logicalTime;
 	}
 
 	private void resignFederationExecution() throws RTIAmbassadorException {
@@ -901,15 +925,15 @@ public class InjectionFederate implements Runnable {
 
 	public double startLogicalTime() {
 		advancing.set(true);
-		return currTime;
+		return logicalTime;
 	}
 
-	Double getCurrTime() {
-		return currTime;
+	Double getLogicalTime() {
+		return logicalTime;
 	}
 
-	void setCurrTime(Double currTime) {
-		this.currTime = currTime;
+	void setLogicalTime(Double logicalTime) {
+		this.logicalTime = logicalTime;
 	}
 
 }

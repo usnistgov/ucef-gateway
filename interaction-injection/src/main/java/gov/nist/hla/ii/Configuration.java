@@ -1,8 +1,10 @@
 package gov.nist.hla.ii;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.Properties;
 
 import org.apache.logging.log4j.LogManager;
@@ -22,7 +24,10 @@ public class Configuration {
     InputStream input = null;
     try {
       logger.info("reading input file " + filename);
-      input = Configuration.class.getClassLoader().getResourceAsStream(filename);      
+//      input = Configuration.class.getClassLoader().getResourceAsStream(filename);
+      File file = new File(filename);
+      URL url = file.toURI().toURL();
+      input = url.openStream();
       logger.info("loading properties");
       properties.load(input);
     } finally {
@@ -32,6 +37,8 @@ public class Configuration {
         } catch (IOException e) {
           logger.warn("exception when closing resource", e);
         }
+      } else {
+    	  logger.error("properties not loaded");
       }
     }
   }
