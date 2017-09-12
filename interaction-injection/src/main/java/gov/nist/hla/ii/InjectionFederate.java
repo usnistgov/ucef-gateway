@@ -167,19 +167,23 @@ public class InjectionFederate implements Runnable {
 			enableTimeConstrained();
 			enableTimeRegulation();
 			publishAndSubscribe();
+			// Notification must occur after publish and subscribe.
+			notifyOfFederationJoin();
 			
-			String interactionName = formatInteractionName("FederateJoinInteraction");
-			Map<String, String> params = new HashMap<String, String>();
-			String federateType = "GatewayMain";
-			String federateId = String.format("%s-%s", "GatewayMain", UUID.randomUUID());
-			params.put("FederateId", federateId);
-			params.put("FederateType", federateType);
-			params.put("IsLateJoiner", "false");
-			injectInteraction(interactionName, params, logicalTime);			
 		} catch (InterruptedException | RTIAmbassadorException e) {
 			log.error(e);
 		}
 		log.trace("<==init");
+	}
+	
+	public void notifyOfFederationJoin() {
+		String interactionName = formatInteractionName("FederateJoinInteraction");
+		Map<String, String> params = new HashMap<String, String>();
+		String federateId = String.format("%s-%s", federateName, UUID.randomUUID());
+		params.put("FederateId", federateId);
+		params.put("FederateType", federateName);
+		params.put("IsLateJoiner", "false");
+		injectInteraction(interactionName, params, logicalTime);
 	}
 
 	public void loadConfiguration(String filepath) throws IOException, PropertyNotFound, PropertyNotAssigned {
@@ -383,21 +387,7 @@ public class InjectionFederate implements Runnable {
 
 	private void joinFederationExecution() throws InterruptedException, RTIAmbassadorException {
 		boolean joinSuccessful = false;
-log.trace("Trying to join...	");
-//		String interactionName = formatInteractionName("FederateJoinInteraction");
-//		Map<String, String> params = new HashMap<String, String>();
-//		String federateType = "GatewayMain";
-//		String federateId = String.format("%s-%s", "GatewayMain", UUID.randomUUID());
-//		params.put("FederateId", String.format("%s@%f", federateId, logicalTime));
-//		params.put("FederateType", String.format("%s@%f", federateType, logicalTime));
-//		params.put("IsLateJoiner", "false");
-//		 params.put("actualLogicalGenerationTime", String.format("%f",
-//		 logicalTime));
-//		 params.put("federateFilter", String.format("%s@%f", "YYY",
-//		 logicalTime));
-//		 params.put("originFed", String.format("%s@%f", "YYY", logicalTime));
-//		 params.put("sourceFed", String.format("%s@%f", "YYY", logicalTime));
-//		injectInteraction(interactionName, params, logicalTime);
+		log.trace("Trying to join...	");
 
 		for (int i = 0; !joinSuccessful && i < MAX_JOIN_ATTEMPTS; i++) {
 			if (i > 0) {
@@ -407,7 +397,9 @@ log.trace("Trying to join...	");
 
 			log.info("joining federation " + federationName + " as " + federateName + " (" + i + ")");
 			try {
-				rtiAmb.joinFederationExecution(federateName, federationName, fedAmb, null);
+				synchronized (rtiAmb) {
+					rtiAmb.joinFederationExecution(federateName, federationName, fedAmb, null);
+				}
 			} catch (FederateAlreadyExecutionMember | FederationExecutionDoesNotExist | SaveInProgress
 					| RestoreInProgress | RTIinternalError | ConcurrentAccessAttempted e) {
 				log.error("", e);
@@ -736,7 +728,7 @@ log.trace("Trying to join...	");
 
 	private void synchronize(String label) throws RTIAmbassadorException {
 		log.info("waiting for announcement of the synchronization point " + label);
-		while (fedAmb.isSynchronizationPointPending(label)) {
+		while (!fedAmb.isSynchronizationPointPending(label)) {
 			tick();
 		}
 
