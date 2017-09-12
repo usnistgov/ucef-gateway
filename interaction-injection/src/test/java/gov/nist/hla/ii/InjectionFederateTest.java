@@ -47,7 +47,7 @@ public class InjectionFederateTest {
 		try {
 			sut.loadConfiguration(CONFIG_FILE);
 			assertEquals(props.getProperty("fom-file"), sut.getFomFilePath());
-		} catch (IOException | PropertyNotFound | PropertyNotAssigned e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
@@ -60,7 +60,7 @@ public class InjectionFederateTest {
 			for (InteractionClassType oct : set) {
 				System.out.println(oct.getName().getValue());
 			}
-		} catch (IOException | PropertyNotFound | PropertyNotAssigned e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
@@ -73,7 +73,7 @@ public class InjectionFederateTest {
 			for (InteractionClassType oct : set) {
 				System.out.println(oct.getName().getValue());
 			}
-		} catch (IOException | PropertyNotFound | PropertyNotAssigned e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
@@ -86,7 +86,7 @@ public class InjectionFederateTest {
 			for (ObjectClassType oct : set) {
 				System.out.println(oct.getName().getValue());
 			}
-		} catch (IOException | PropertyNotFound | PropertyNotAssigned e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
@@ -99,7 +99,7 @@ public class InjectionFederateTest {
 			for (ObjectClassType oct : set) {
 				System.out.println(oct.getName().getValue());
 			}
-		} catch (IOException | PropertyNotFound | PropertyNotAssigned e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}

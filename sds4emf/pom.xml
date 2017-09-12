@@ -28,11 +28,6 @@
 			<artifactId>org.eclipse.emf.ecore.xmi</artifactId>
 			<version>2.12.0</version>
 		</dependency>
-		<dependency>
-			<groupId>org.emfjson</groupId>
-			<artifactId>emfjson-jackson</artifactId>
-			<version>1.0.0-rc.1</version>
-		</dependency>
 		<!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
 		<dependency>
 			<groupId>commons-io</groupId>

@@ -1,7 +1,10 @@
 package gov.nist.hla.ii;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -15,6 +18,7 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.cpswt.config.ConfigParser;
 import org.cpswt.hla.SynchronizationPoints;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.ieee.standards.ieee1516._2010.AttributeType1;
@@ -29,6 +33,9 @@ import org.portico.impl.hla13.types.DoubleTime;
 import org.portico.impl.hla13.types.DoubleTimeFactory;
 import org.portico.impl.hla13.types.DoubleTimeInterval;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import gov.nist.hla.ii.config.InteractionInjectionConfig;
 import gov.nist.hla.ii.exception.PropertyNotAssigned;
 import gov.nist.hla.ii.exception.PropertyNotFound;
 import gov.nist.hla.ii.exception.RTIAmbassadorException;
@@ -85,7 +92,7 @@ public class InjectionFederate implements Runnable {
 
 	private State state = State.CONSTRUCTED;
 	private Double logicalTime;
-
+	private InteractionInjectionConfig iiConfig;
 	private Map<String, Integer> registeredObjects = new HashMap<String, Integer>();
 
 	RTIambassador getRtiAmb() {
@@ -186,30 +193,30 @@ public class InjectionFederate implements Runnable {
 		injectInteraction(interactionName, params, logicalTime);
 	}
 
-	public void loadConfiguration(String filepath) throws IOException, PropertyNotFound, PropertyNotAssigned {
+	public void loadConfiguration(String filepath) throws IOException {
 		if (state != State.CONSTRUCTED && state != State.INITIALIZED) {
 			throw new IllegalStateException("loadConfiguration cannot be called in the current state: " + state.name());
 		}
-
+		
 		log.debug("loading injection federate configuration");
-		Configuration configuration = new Configuration(filepath);
-
-		federateName = configuration.getRequiredProperty("federate-name");
+		Path configPath = Paths.get(filepath);
+        File configFile = configPath.toFile();
+        ObjectMapper mapper = new ObjectMapper();
+        iiConfig = mapper.readValue(configFile, InteractionInjectionConfig.class);
+		federateName = iiConfig.getFederateName();
 		log.debug("federate-name=" + federateName);
-		federationName = configuration.getRequiredProperty("federation");
+		federationName = iiConfig.getFederation();
 		log.debug("federation=" + federationName);
-		fomFilePath = configuration.getRequiredProperty("fom-file");
+		fomFilePath = iiConfig.getFomFile();
 		log.debug("fom-file=" + fomFilePath);
-		lookahead = configuration.getRequiredPropertyAsDouble("lookahead");
+		lookahead = iiConfig.getLookahead();
 		log.debug("lookahead=" + lookahead);
-		stepsize = configuration.getRequiredPropertyAsDouble("stepsize");
+		stepsize = iiConfig.getStepsize();
 		log.debug("stepsize=" + stepsize);
-
 		fom = loadFOM();
-
 		changeState(State.INITIALIZED);
 	}
-
+	
 	private void changeState(State newState) {
 		if (newState != state) {
 			log.info("state change from " + state.name() + " to " + newState.name());
