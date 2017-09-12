@@ -172,8 +172,8 @@ public class InjectionFederate implements Runnable {
 			Map<String, String> params = new HashMap<String, String>();
 			String federateType = "GatewayMain";
 			String federateId = String.format("%s-%s", "GatewayMain", UUID.randomUUID());
-			params.put("FederateId", String.format("%s@%f", federateId, logicalTime));
-			params.put("FederateType", String.format("%s@%f", federateType, logicalTime));
+			params.put("FederateId", federateId);
+			params.put("FederateType", federateType);
 			params.put("IsLateJoiner", "false");
 			injectInteraction(interactionName, params, logicalTime);			
 		} catch (InterruptedException | RTIAmbassadorException e) {
