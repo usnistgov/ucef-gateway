@@ -112,11 +112,11 @@ public class InjectionFederate implements Runnable {
 	private String federationName;
 	private static String fomFilePath;
 
-	private InterObjInjection interObjectInjection;
+	private InjectionCallback interObjectInjection;
 
-	private InterObjReception interObjectReception;
+	private ReceptionCallback interObjectReception;
 
-	private TimeStepHook timeStepHook;
+	private SynchronizationCallback timeStepHook;
 
 	private AtomicBoolean advancing = new AtomicBoolean(false);
 
@@ -276,17 +276,17 @@ public class InjectionFederate implements Runnable {
 	}
 
 	private void processIntObjs(Double logicalTime) {
-		Queue<InterObjDef> interactions = null;
+		Queue<HLAPacket> interactions = null;
 		if (logicalTime == null) {
-			interactions = interObjectInjection.getPreSynchInteractions();
+			interactions = interObjectInjection.getPreSynchPublications();
 		} else {
 			interactions = interObjectInjection.getPublications(logicalTime);
 		}
 
-		InterObjDef def = null;
+		HLAPacket def = null;
 		while ((def = interactions.poll()) != null) {
 			log.trace("def=" + def);
-			if (def.getType() == InterObjDef.TYPE.OBJECT) {
+			if (def.getType() == HLAPacket.TYPE.OBJECT) {
 				updateObject(def);
 			} else {
 				injectInteraction(def, logicalTime);
@@ -523,8 +523,8 @@ public class InjectionFederate implements Runnable {
 		}
 	}
 
-	public void injectInteraction(InterObjDef def, Double logicalTime) {
-		injectInteraction(def.getName(), def.getParameters(), logicalTime);
+	public void injectInteraction(HLAPacket def, Double logicalTime) {
+		injectInteraction(def.getClassName(), def.getFields(), logicalTime);
 	}
 
 	public void injectInteraction(String interactionName, Map<String, String> parameters, Double logicalTime) {
@@ -586,13 +586,13 @@ public class InjectionFederate implements Runnable {
 		return suppliedParameters;
 	}
 
-	public void updateObject(InterObjDef def) {
+	public void updateObject(HLAPacket def) {
 		int classHandle = -1;
 		int objectHandle = -1;
 		try {
-			classHandle = getRtiAmb().getObjectClassHandle(def.getName());
+			classHandle = getRtiAmb().getObjectClassHandle(def.getClassName());
 			objectHandle = getRtiAmb().registerObjectInstance(classHandle);
-			updateObject(classHandle, objectHandle, def.getParameters());
+			updateObject(classHandle, objectHandle, def.getFields());
 		} catch (NullPointerException | FederateNotExecutionMember | RTIinternalError | NameNotFound
 				| ObjectClassNotDefined | ObjectClassNotPublished | SaveInProgress | RestoreInProgress
 				| ConcurrentAccessAttempted e) {
@@ -649,8 +649,8 @@ public class InjectionFederate implements Runnable {
 		return suppliedAttributes;
 	}
 
-	public int publishInteraction(InterObjDef def) {
-		return publishInteraction(def.getName());
+	public int publishInteraction(HLAPacket def) {
+		return publishInteraction(def.getClassName());
 	}
 
 	public int publishInteraction(String interactionName) {
@@ -665,8 +665,8 @@ public class InjectionFederate implements Runnable {
 		return classHandle;
 	}
 
-	public int publishObject(InterObjDef def) {
-		return publishObject(def.getName(), def.getParameters());
+	public int publishObject(HLAPacket def) {
+		return publishObject(def.getClassName(), def.getFields());
 	}
 
 	public int publishObject(String objectName, Map<String, String> attrMap) {
@@ -883,27 +883,27 @@ public class InjectionFederate implements Runnable {
 		return oct;
 	}
 
-	public InterObjInjection getInterObjectInjection() {
+	public InjectionCallback getInterObjectInjection() {
 		return interObjectInjection;
 	}
 
-	public void setInterObjectInjection(InterObjInjection interObjectInjection) {
+	public void setInterObjectInjection(InjectionCallback interObjectInjection) {
 		this.interObjectInjection = interObjectInjection;
 	}
 
-	public InterObjReception getInterObjectReception() {
+	public ReceptionCallback getInterObjectReception() {
 		return interObjectReception;
 	}
 
-	public void setInterObjectReception(InterObjReception interObjectReception) {
+	public void setInterObjectReception(ReceptionCallback interObjectReception) {
 		this.interObjectReception = interObjectReception;
 	}
 
-	public TimeStepHook getTimeStepHook() {
+	public SynchronizationCallback getTimeStepHook() {
 		return timeStepHook;
 	}
 
-	public void setTimeStepHook(TimeStepHook timeStepHook) {
+	public void setTimeStepHook(SynchronizationCallback timeStepHook) {
 		this.timeStepHook = timeStepHook;
 	}
 

@@ -30,212 +30,195 @@ import hla.rti.jlc.NullFederateAmbassador;
 
 // assume single threaded environment
 public class FederateAmbassador extends NullFederateAmbassador {
-	private static final Logger log = LogManager.getLogger();
+    private static final Logger log = LogManager.getLogger();
 
-	private final double federateTime = 0.0;
-	private final double federateLookahead = 1.0;
+    private class ObjectDetails {
+        private int objectHandle;
+        private int objectClass;
+        private String objectName;
 
-	private class ObjectDetails {
-		private int objectHandle;
-		private int objectClass;
-		private String objectName;
+        public ObjectDetails(int objectHandle, int objectClass, String objectName) {
+            this.objectHandle = objectHandle;
+            this.objectClass = objectClass;
+            this.objectName = objectName;
+        }
 
-		public ObjectDetails(int objectHandle, int objectClass, String objectName) {
-			this.objectHandle = objectHandle;
-			this.objectClass = objectClass;
-			this.objectName = objectName;
-		}
+        public int getObjectHandle() {
+            return objectHandle;
+        }
 
-//		public int getObjectHandle() {
-//			return objectHandle;
-//		}
+        public int getObjectClass() {
+            return objectClass;
+        }
 
-		public int getObjectClass() {
-			return objectClass;
-		}
+        public String getObjectName() {
+            return objectName;
+        }
+    }
 
-		public String getObjectName() {
-			return objectName;
-		}
-	}
+    // synchronization point labels that have been announced but not achieved
+    private Set<String> pendingSynchronizationPoints = new HashSet<String>();
 
-	// synchronization point labels that have been announced but not achieved
-	private Set<String> pendingSynchronizationPoints = new HashSet<String>();
+    // map the handle for a discovered object instance to its associated ObjectDetails
+    private Map<Integer, ObjectDetails> objectInstances = new HashMap<Integer, ObjectDetails>();
 
-	private Set<String> _achievedSynchronizationPoints = new HashSet<String>();
+    // names of previously discovered object instances that have since been removed
+    private LinkedList<String> removedObjectNames = new LinkedList<String>();
 
-	
-	// map the handle for a discovered object instance to its associated
-	// ObjectDetails
-	private Map<Integer, ObjectDetails> objectInstances = new HashMap<Integer, ObjectDetails>();
+    private LinkedList<Interaction> receivedInteractions = new LinkedList<Interaction>();
+    private LinkedList<ObjectReflection> receivedObjectReflections = new LinkedList<ObjectReflection>();
 
-	// names of previously discovered object instances that have since been
-	// removed
-	private LinkedList<String> removedObjectNames = new LinkedList<String>();
+    private boolean isTimeAdvancing = false;
+    private boolean isTimeRegulating = false;
+    private boolean isTimeConstrained = false;
 
-	private LinkedList<Interaction> receivedInteractions = new LinkedList<Interaction>();
-	private LinkedList<ObjectReflection> receivedObjectReflections = new LinkedList<ObjectReflection>();
+    private double logicalTime = 0D;
 
-	private boolean isTimeAdvancing = false;
-	private boolean isTimeRegulating = false;
-	private boolean isTimeConstrained = false;
+    public void announceSynchronizationPoint(String synchronizationPointLabel, byte[] userSuppliedTag)
+            throws FederateInternalError {
+        if (pendingSynchronizationPoints.contains(synchronizationPointLabel)) {
+            log.warn("duplicate announcement of synchronization point: " + synchronizationPointLabel);
+        } else {
+            pendingSynchronizationPoints.add(synchronizationPointLabel);
+            log.info("synchronization point announced: " + synchronizationPointLabel);
+        }
+    }
 
-	private double logicalTime = 0D;
+    public void federationSynchronized(String synchronizationPointLabel) throws FederateInternalError {
+        pendingSynchronizationPoints.remove(synchronizationPointLabel);
+        log.info("synchronization point achieved: " + synchronizationPointLabel);
+    }
 
-	public void announceSynchronizationPoint(String synchronizationPointLabel, byte[] userSuppliedTag)
-			throws FederateInternalError {
-		if (pendingSynchronizationPoints.contains(synchronizationPointLabel)) {
-			log.warn("duplicate announcement of synchronization point: " + synchronizationPointLabel);
-		} else {
-			pendingSynchronizationPoints.add(synchronizationPointLabel);
-			log.info("synchronization point announced: " + synchronizationPointLabel);
-		}
-	}
+    public void timeRegulationEnabled(LogicalTime theFederateTime)
+            throws InvalidFederationTime, EnableTimeRegulationWasNotPending, FederateInternalError {
+        isTimeRegulating = true;
+        logicalTime = convertTime(theFederateTime);
+        log.info("time regulation enabled: t=" + logicalTime);
+    }
 
-	public void federationSynchronized(String synchronizationPointLabel) throws FederateInternalError {
-		pendingSynchronizationPoints.remove(synchronizationPointLabel);
-        _achievedSynchronizationPoints.add(synchronizationPointLabel);
-		log.info("synchronization point achieved: " + synchronizationPointLabel);
-	}
+    public void timeConstrainedEnabled(LogicalTime theFederateTime)
+            throws InvalidFederationTime, EnableTimeConstrainedWasNotPending, FederateInternalError {
+        isTimeConstrained = true;
+        logicalTime = convertTime(theFederateTime);
+        log.info("time constrained enabled: t=" + logicalTime);
+    }
 
-	public void timeRegulationEnabled(LogicalTime theFederateTime)
-			throws InvalidFederationTime, EnableTimeRegulationWasNotPending, FederateInternalError {
-		isTimeRegulating = true;
-		logicalTime = convertTime(theFederateTime);
-		log.debug("time regulation enabled: t=" + logicalTime);
-	}
+    public void timeAdvanceGrant(LogicalTime theTime)
+            throws InvalidFederationTime, TimeAdvanceWasNotInProgress, FederateInternalError {
+        isTimeAdvancing = false;
+        logicalTime = convertTime(theTime);
+        log.debug("time advance granted: t=" + logicalTime);
+    }
 
-	public void timeConstrainedEnabled(LogicalTime theFederateTime)
-			throws InvalidFederationTime, EnableTimeConstrainedWasNotPending, FederateInternalError {
-		isTimeConstrained = true;
-		logicalTime = convertTime(theFederateTime);
-		log.debug("time constrained enabled: t=" + logicalTime);
-	}
+    public void receiveInteraction(int interactionClass, ReceivedInteraction theInteraction, byte[] userSuppliedTag)
+            throws InteractionClassNotKnown, InteractionParameterNotKnown, FederateInternalError {
+        try {
+            receiveInteraction(interactionClass, theInteraction, userSuppliedTag, null, null);
+        } catch (InvalidFederationTime e) {
+            throw new FederateInternalError(e);
+        }
+    }
 
-	public void timeAdvanceGrant(LogicalTime theTime)
-			throws InvalidFederationTime, TimeAdvanceWasNotInProgress, FederateInternalError {
-		isTimeAdvancing = false;
-		logicalTime = convertTime(theTime);
-		log.debug("time advance granted: t=" + logicalTime);
-	}
+    public void receiveInteraction(int interactionClass, ReceivedInteraction theInteraction, byte[] userSuppliedTag,
+            LogicalTime theTime, EventRetractionHandle eventRetractionHandle)
+            throws InteractionClassNotKnown, InteractionParameterNotKnown, InvalidFederationTime,
+            FederateInternalError {
+        Interaction newInteraction = new Interaction(interactionClass, theInteraction);
+        receivedInteractions.add(newInteraction);
+        log.debug("received " + newInteraction.toString());
+    }
 
-	public void receiveInteraction(int interactionClass, ReceivedInteraction theInteraction, byte[] userSuppliedTag)
-			throws InteractionClassNotKnown, InteractionParameterNotKnown, FederateInternalError {
-		try {
-			receiveInteraction(interactionClass, theInteraction, userSuppliedTag, null, null);
-		} catch (InvalidFederationTime e) {
-			throw new FederateInternalError(e);
-		}
-	}
+    public void discoverObjectInstance(int theObject, int theObjectClass, String objectName)
+            throws CouldNotDiscover, ObjectClassNotKnown, FederateInternalError {
+        if (objectInstances.put(theObject, new ObjectDetails(theObject, theObjectClass, objectName)) != null) {
+            throw new FederateInternalError("discovered multiple object instances with handle " + theObject);
+        }
+        log.info("discovered object=" + objectName + " handle="+ theObject + "class=" + theObjectClass);
+    }
 
-	public void receiveInteraction(int interactionClass, ReceivedInteraction theInteraction, byte[] userSuppliedTag,
-			LogicalTime theTime, EventRetractionHandle eventRetractionHandle) throws InteractionClassNotKnown,
-			InteractionParameterNotKnown, InvalidFederationTime, FederateInternalError {
-		log.info("received interaction: handle=" + interactionClass);
-		receivedInteractions.add(new Interaction(interactionClass, theInteraction));
-	}
+    public void reflectAttributeValues(int theObject, ReflectedAttributes theAttributes, byte[] userSuppliedTag)
+            throws ObjectNotKnown, AttributeNotKnown, FederateOwnsAttributes, FederateInternalError {
+        try {
+            reflectAttributeValues(theObject, theAttributes, userSuppliedTag, null, null);
+        } catch (InvalidFederationTime e) {
+            throw new FederateInternalError(e);
+        }
+    }
 
-	public void discoverObjectInstance(int theObject, int theObjectClass, String objectName)
-			throws CouldNotDiscover, ObjectClassNotKnown, FederateInternalError {
-		log.info("discovered new object instance: (handle, class, name)=" + "(" + theObject + ", " + theObjectClass
-				+ ", " + objectName + ")");
-		if (objectInstances.get(theObject) == null) {
-			objectInstances.put(theObject, new ObjectDetails(theObject, theObjectClass, objectName));
-		} else {
-			log.debug(String.format("Already discovered: theObject=%d theObjectClass=%d objectName=%s its ok carry on", theObject,
-					theObjectClass, objectName));
-		}
-	}
+    public void reflectAttributeValues(int theObject, ReflectedAttributes theAttributes, byte[] userSuppliedTag,
+            LogicalTime theTime, EventRetractionHandle retractionHandle)
+            throws ObjectNotKnown, AttributeNotKnown, FederateOwnsAttributes, InvalidFederationTime,
+            FederateInternalError {
+        ObjectDetails details = objectInstances.get(theObject);
+        if (details == null) {
+            throw new ObjectNotKnown("no discovered object instance with handle " + theObject);
+        }
+        int theObjectClass = details.getObjectClass();
+        String objectName = details.getObjectName();
+        ObjectReflection newObjectReflection = new ObjectReflection(theObjectClass, objectName, theAttributes);
+        receivedObjectReflections.add(newObjectReflection);
+        log.debug("received " + newObjectReflection.toString());
+    }
 
-	public void reflectAttributeValues(int theObject, ReflectedAttributes theAttributes, byte[] userSuppliedTag)
-			throws ObjectNotKnown, AttributeNotKnown, FederateOwnsAttributes, FederateInternalError {
-		try {
-			reflectAttributeValues(theObject, theAttributes, userSuppliedTag, null, null);
-		} catch (InvalidFederationTime e) {
-			throw new FederateInternalError(e);
-		}
-	}
+    public void removeObjectInstance(int theObject, byte[] userSuppliedTag)
+            throws ObjectNotKnown, FederateInternalError {
+        try {
+            removeObjectInstance(theObject, userSuppliedTag, null, null);
+        } catch (InvalidFederationTime e) {
+            throw new FederateInternalError(e);
+        }
+    }
 
-	public void reflectAttributeValues(int theObject, ReflectedAttributes theAttributes, byte[] userSuppliedTag,
-			LogicalTime theTime, EventRetractionHandle retractionHandle) throws ObjectNotKnown, AttributeNotKnown,
-			FederateOwnsAttributes, InvalidFederationTime, FederateInternalError {
-		ObjectDetails details = objectInstances.get(theObject);
-		if (details == null) {
-			throw new ObjectNotKnown("no discovered object instance with handle " + theObject);
-		}
-		int theObjectClass = details.getObjectClass();
-		String objectName = details.getObjectName();
-		receivedObjectReflections.add(new ObjectReflection(theObjectClass, objectName, theAttributes));
-		log.info("received object reflection for the object instance " + objectName);
-	}
+    public void removeObjectInstance(int theObject, byte[] userSuppliedTag, LogicalTime theTime,
+            EventRetractionHandle retractionHandle)
+            throws ObjectNotKnown, InvalidFederationTime, FederateInternalError {
+        ObjectDetails details = objectInstances.remove(theObject);
+        if (details == null) {
+            throw new ObjectNotKnown("no discovered object instance with handle " + theObject);
+        }
+        String objectName = details.getObjectName();
+        removedObjectNames.add(objectName);
+        log.info("received removal notice for object=" + objectName + " handle=" + theObject);
+    }
 
-	public void removeObjectInstance(int theObject, byte[] userSuppliedTag)
-			throws ObjectNotKnown, FederateInternalError {
-		try {
-			removeObjectInstance(theObject, userSuppliedTag, null, null);
-		} catch (InvalidFederationTime e) {
-			throw new FederateInternalError(e);
-		}
-	}
+    public boolean isSynchronizationPointPending(String label) {
+        return pendingSynchronizationPoints.contains(label);
+    }
 
-	public void removeObjectInstance(int theObject, byte[] userSuppliedTag, LogicalTime theTime,
-			EventRetractionHandle retractionHandle)
-			throws ObjectNotKnown, InvalidFederationTime, FederateInternalError {
-		ObjectDetails details = objectInstances.remove(theObject);
-		if (details == null) {
-			throw new ObjectNotKnown("no discovered object instance with handle " + theObject);
-		}
-		String objectName = details.getObjectName();
-		removedObjectNames.add(objectName);
-		log.info("received notice to remove object instance with handle=" + theObject + " and name=" + objectName);
-	}
+    public double getLogicalTime() {
+        return logicalTime;
+    }
 
-	public boolean isSynchronizationPointPending(String label) {
-		return pendingSynchronizationPoints.contains(label);
-	}
+    public void setTimeAdvancing() {
+        this.isTimeAdvancing = true;
+    }
 
-	public double getFederateTime() {
-		return federateTime;
-	}
+    public boolean isTimeAdvancing() {
+        return isTimeAdvancing;
+    }
 
-	public double getFederateLookahead() {
-		return federateLookahead;
-	}
+    public boolean isTimeRegulating() {
+        return isTimeRegulating;
+    }
 
-	public double getLogicalTime() {
-		return logicalTime;
-	}
+    public boolean isTimeConstrained() {
+        return isTimeConstrained;
+    }
 
-	public void setTimeAdvancing() {
-		isTimeAdvancing = true;
-	}
+    public Interaction nextInteraction() {
+        return receivedInteractions.pollFirst(); // destructive read
+    }
 
-	public boolean isTimeAdvancing() {
-		return isTimeAdvancing;
-	}
+    public ObjectReflection nextObjectReflection() {
+        return receivedObjectReflections.pollFirst(); // destructive read
+    }
 
-	public boolean isTimeRegulating() {
-		return isTimeRegulating;
-	}
+    public String nextRemovedObjectName() {
+        return removedObjectNames.pollFirst(); // destructive read
+    }
 
-	public boolean isTimeConstrained() {
-		return isTimeConstrained;
-	}
-
-	public Interaction nextInteraction() {
-		return receivedInteractions.pollFirst(); // destructive read
-	}
-
-	public ObjectReflection nextObjectReflection() {
-		return receivedObjectReflections.pollFirst(); // destructive read
-	}
-
-	public String nextRemovedObjectName() {
-		return removedObjectNames.pollFirst(); // destructive read
-	}
-
-	private double convertTime(LogicalTime logicalTime) {
-		// conversion from portico to java types
-		return ((DoubleTime) logicalTime).getTime();
-	}
+    private double convertTime(LogicalTime logicalTime) {
+        // conversion from Portico to java types
+        return ((DoubleTime) logicalTime).getTime();
+    }
 }
