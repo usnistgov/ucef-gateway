@@ -17,8 +17,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.portico.impl.hla13.types.DoubleTime;
 
-import gov.nist.hla.ii.exception.PropertyNotAssigned;
-import gov.nist.hla.ii.exception.PropertyNotFound;
 import gov.nist.hla.ii.exception.RTIAmbassadorException;
 
 // Tests herein require a fom file populated to a specific state.  The file in question is fom/som.xml.

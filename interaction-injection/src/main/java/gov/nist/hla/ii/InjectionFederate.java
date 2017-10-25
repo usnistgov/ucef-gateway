@@ -36,8 +36,6 @@ import org.portico.impl.hla13.types.DoubleTimeInterval;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import gov.nist.hla.ii.config.InteractionInjectionConfig;
-import gov.nist.hla.ii.exception.PropertyNotAssigned;
-import gov.nist.hla.ii.exception.PropertyNotFound;
 import gov.nist.hla.ii.exception.RTIAmbassadorException;
 import gov.nist.sds4emf.Deserialize;
 import hla.rti.AsynchronousDeliveryAlreadyEnabled;
