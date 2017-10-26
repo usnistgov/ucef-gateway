@@ -20,10 +20,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.cpswt.config.ConfigParser;
 import org.cpswt.hla.SynchronizationPoints;
+import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.ieee.standards.ieee1516._2010.AttributeType1;
 import org.ieee.standards.ieee1516._2010.DocumentRoot;
 import org.ieee.standards.ieee1516._2010.InteractionClassType;
+import org.ieee.standards.ieee1516._2010.InteractionClassType1;
 import org.ieee.standards.ieee1516._2010.ObjectClassType;
 import org.ieee.standards.ieee1516._2010.ObjectModelType;
 import org.ieee.standards.ieee1516._2010.SharingEnumerations;
@@ -467,9 +469,10 @@ public class InjectionFederate implements Runnable {
 	private void publishAndSubscribe() {
 		int handle = 0;
 		for (InteractionClassType classType : getInteractionSubscribe()) {
-			log.info("creating HLA subscription for the interaction=" + classType.getName().getValue());
+		    String classPath = getInteractionClassPath(classType);
+			log.info("creating HLA subscription for the interaction=" + classPath);
 			try {
-				handle = rtiAmb.getInteractionClassHandle(classType.getName().getValue());
+				handle = rtiAmb.getInteractionClassHandle(classPath);
 				rtiAmb.subscribeInteractionClass(handle);
 			} catch (NameNotFound | FederateNotExecutionMember | RTIinternalError | InteractionClassNotDefined
 					| FederateLoggingServiceCalls | SaveInProgress | RestoreInProgress | ConcurrentAccessAttempted e) {
@@ -477,9 +480,10 @@ public class InjectionFederate implements Runnable {
 			}
 		}
 		for (InteractionClassType classType : getInteractionPublish()) {
-			log.info("creating HLA publication for the interaction=" + classType.getName().getValue());
+		    String classPath = getInteractionClassPath(classType);
+			log.info("creating HLA publication for the interaction=" + classPath);
 			try {
-				handle = rtiAmb.getInteractionClassHandle(classType.getName().getValue());
+				handle = rtiAmb.getInteractionClassHandle(classPath);
 				rtiAmb.publishInteractionClass(handle);
 			} catch (NameNotFound | FederateNotExecutionMember | RTIinternalError | InteractionClassNotDefined
 					| SaveInProgress | RestoreInProgress | ConcurrentAccessAttempted e) {
@@ -487,15 +491,17 @@ public class InjectionFederate implements Runnable {
 			}
 		}
 		for (ObjectClassType classType : getObjectSubscribe()) {
-			log.info("creating HLA subscription for the object=" + classType.getName().getValue());
+		    String classPath = getObjectClassPath(classType);
+			log.info("creating HLA subscription for the object=" + classPath);
 			try {
-				String nname = formatObjectName(classType.getName().getValue());
-				log.info("creating HLA subscription for the object1=" + nname);
-				int objectHandle = rtiAmb.getObjectClassHandle(nname);
+				int objectHandle = rtiAmb.getObjectClassHandle(classPath);
 				AttributeHandleSet attributes = RtiFactoryFactory.getRtiFactory().createAttributeHandleSet();
+				Set<String> filteredAttributes = getFilteredAttributes(classType, SharingEnumerations.SUBSCRIBE);
 				for (AttributeType1 attribute : classType.getAttribute()) {
-					int attributeHandle = rtiAmb.getAttributeHandle(attribute.getName().getValue(), objectHandle);
-					attributes.add(attributeHandle);
+				    if (filteredAttributes.contains(attribute.getName().getValue())) {
+    					int attributeHandle = rtiAmb.getAttributeHandle(attribute.getName().getValue(), objectHandle);
+    					attributes.add(attributeHandle);
+				    }
 				}
 				rtiAmb.subscribeObjectClassAttributes(objectHandle, attributes);
 			} catch (NameNotFound | FederateNotExecutionMember | RTIinternalError | SaveInProgress | RestoreInProgress
@@ -504,16 +510,18 @@ public class InjectionFederate implements Runnable {
 			}
 		}
 		for (ObjectClassType classType : getObjectPublish()) {
-			log.info("creating HLA publication for the object=" + classType.getName().getValue());
+		    String classPath = getObjectClassPath(classType);
+			log.info("creating HLA publication for the object=" + classPath);
 			try {
-				String className = formatObjectName(classType.getName().getValue());
-				int classHandle = rtiAmb.getObjectClassHandle(className);
-				log.info("creating HLA publication for the object1=" + className);
+				int classHandle = rtiAmb.getObjectClassHandle(classPath);
 				AttributeHandleSet attributes = RtiFactoryFactory.getRtiFactory().createAttributeHandleSet();
-				for (AttributeType1 attribute : classType.getAttribute()) {
-					int attributeHandle = rtiAmb.getAttributeHandle(attribute.getName().getValue(), classHandle);
-					attributes.add(attributeHandle);
-				}
+                Set<String> filteredAttributes = getFilteredAttributes(classType, SharingEnumerations.PUBLISH);
+                for (AttributeType1 attribute : classType.getAttribute()) {
+                    if (filteredAttributes.contains(attribute.getName().getValue())) {
+                        int attributeHandle = rtiAmb.getAttributeHandle(attribute.getName().getValue(), classHandle);
+                        attributes.add(attributeHandle);
+                    }
+                }
 				rtiAmb.publishObjectClass(classHandle, attributes);
 			} catch (NameNotFound | FederateNotExecutionMember | RTIinternalError | SaveInProgress | RestoreInProgress
 					| ConcurrentAccessAttempted | ObjectClassNotDefined | AttributeNotDefined
@@ -840,9 +848,7 @@ public class InjectionFederate implements Runnable {
 	public Set<ObjectClassType> getObjectSubscribe() {
 		Set<ObjectClassType> set = new HashSet<ObjectClassType>();
 		for (ObjectClassType oct : getFom().getObjects().getObjectClass().getObjectClass()) {
-			log.debug("getObjectSubscribe=" + oct.getName().getValue());
-			ObjectClassType oct1 = EcoreUtil.copy(oct);
-			getObjects(set, oct1, SharingEnumerations.SUBSCRIBE);
+			getObjects(set, oct, SharingEnumerations.SUBSCRIBE);
 		}
 
 		return set;
@@ -851,9 +857,7 @@ public class InjectionFederate implements Runnable {
 	public Set<ObjectClassType> getObjectPublish() {
 		Set<ObjectClassType> set = new HashSet<ObjectClassType>();
 		for (ObjectClassType oct : getFom().getObjects().getObjectClass().getObjectClass()) {
-			log.debug("getObjectPublish=" + oct.getName().getValue());
-			ObjectClassType oct1 = EcoreUtil.copy(oct);
-			getObjects(set, oct1, SharingEnumerations.PUBLISH);
+			getObjects(set, oct, SharingEnumerations.PUBLISH);
 		}
 
 		return set;
@@ -861,21 +865,9 @@ public class InjectionFederate implements Runnable {
 
 	public ObjectClassType getObjects(Set<ObjectClassType> set, ObjectClassType oct, final SharingEnumerations pubsub) {
 		log.debug("getObjects=" + oct.getName().getValue());
-		Iterator<AttributeType1> itr = oct.getAttribute().iterator();
-		while (itr.hasNext()) {
-			AttributeType1 attr = itr.next();
-			log.debug("processing AttributeType1.name==" + attr.getName().getValue());
-			if (attr.getSharing() != null) {
-				if (attr.getSharing().getValue() != pubsub
-						&& attr.getSharing().getValue() != SharingEnumerations.PUBLISH_SUBSCRIBE) {
-					itr.remove();
-					log.trace("removed AttributeType1.name=" + attr.getName().getValue());
-				}
-			}
-			if (!oct.getAttribute().isEmpty()) {
-				set.add(oct);
-				log.trace("added ObjectClassType.name=" + oct.getName().getValue() + " size=" + set.size());
-			}
+		if (getFilteredAttributes(oct, pubsub).isEmpty() == false) {
+			set.add(oct);
+			log.trace("added ObjectClassType.name=" + oct.getName().getValue() + " size=" + set.size());
 		}
 		for (ObjectClassType oct1 : oct.getObjectClass()) {
 			getObjects(set, oct1, pubsub);
@@ -932,5 +924,43 @@ public class InjectionFederate implements Runnable {
 	void setLogicalTime(Double logicalTime) {
 		this.logicalTime = logicalTime;
 	}
-
+	
+	private String getInteractionClassPath(InteractionClassType interaction) {
+	    String classPath = interaction.getName().getValue();
+	    EObject parent = interaction.eContainer();
+	    while (parent != null && parent instanceof InteractionClassType) {
+	        InteractionClassType parentInteraction = (InteractionClassType)parent;
+	        classPath = parentInteraction.getName().getValue() + "." + classPath;
+	        parent = parent.eContainer();
+	    }
+	    return classPath;
+	}
+	
+	private String getObjectClassPath(ObjectClassType object) {
+        String classPath = object.getName().getValue();
+        EObject parent = object.eContainer();
+        while (parent != null && parent instanceof ObjectClassType) {
+            ObjectClassType parentObject = (ObjectClassType)parent;
+            classPath = parentObject.getName().getValue() + "." + classPath;
+            parent = parent.eContainer();
+        }
+        return classPath;
+    }
+    
+	private Set<String> getFilteredAttributes(ObjectClassType object, final SharingEnumerations pubsub) {
+	    HashSet<String> attributes = new HashSet<String>();
+        Iterator<AttributeType1> itr = object.getAttribute().iterator();
+        while (itr.hasNext()) {
+            AttributeType1 attr = itr.next();
+            log.debug("processing AttributeType1.name==" + attr.getName().getValue());
+            if (attr.getSharing() != null) {
+                if (attr.getSharing().getValue() == pubsub
+                        || attr.getSharing().getValue() == SharingEnumerations.PUBLISH_SUBSCRIBE) {
+                    attributes.add(attr.getName().getValue());
+                }
+            }
+        }
+        log.debug("found " + attributes.size() + " relevant attributes");
+        return attributes;
+	}
 }
