@@ -18,14 +18,11 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.cpswt.config.ConfigParser;
 import org.cpswt.hla.SynchronizationPoints;
 import org.eclipse.emf.ecore.EObject;
-import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.ieee.standards.ieee1516._2010.AttributeType1;
 import org.ieee.standards.ieee1516._2010.DocumentRoot;
 import org.ieee.standards.ieee1516._2010.InteractionClassType;
-import org.ieee.standards.ieee1516._2010.InteractionClassType1;
 import org.ieee.standards.ieee1516._2010.ObjectClassType;
 import org.ieee.standards.ieee1516._2010.ObjectModelType;
 import org.ieee.standards.ieee1516._2010.SharingEnumerations;
@@ -76,7 +73,7 @@ import hla.rti.jlc.RtiFactoryFactory;
 
 // assume that SIMULATION_END is not sent as a Receive Order message
 public class InjectionFederate implements Runnable {
-	private static final Logger log = LogManager.getLogger(InjectionFederate.class);
+	private static final Logger log = LogManager.getLogger();
 
 	private static final String SIMULATION_END = "InteractionRoot.C2WInteractionRoot.SimulationControl.SimEnd";
 
@@ -150,7 +147,7 @@ public class InjectionFederate implements Runnable {
 
 	private double stepsize;
 
-	public InjectionFederate() throws RTIAmbassadorException, ParserConfigurationException {
+	public InjectionFederate() throws ParserConfigurationException {
 
 		try {
 			rtiAmb = RtiFactoryFactory.getRtiFactory().createRtiAmbassador();
@@ -296,7 +293,7 @@ public class InjectionFederate implements Runnable {
 		}
 	}
 
-	private void handleMessages() throws RTIAmbassadorException {
+	private void handleMessages() {
 
 		boolean receivedNothing = true;
 		try {
@@ -384,7 +381,7 @@ public class InjectionFederate implements Runnable {
 		return attributes;
 	}
 
-	public void tick() throws RTIAmbassadorException {
+	private void tick() {
 		try {
 			rtiAmb.tick();
 		} catch (RTIexception e) {
@@ -392,7 +389,7 @@ public class InjectionFederate implements Runnable {
 		}
 	}
 
-	private void joinFederationExecution() throws InterruptedException, RTIAmbassadorException {
+	private void joinFederationExecution() throws InterruptedException {
 		boolean joinSuccessful = false;
 		log.trace("Trying to join...	");
 
@@ -416,7 +413,7 @@ public class InjectionFederate implements Runnable {
 	}
 
 	// enable Receive Order messages during any tick call
-	public void enableAsynchronousDelivery() throws RTIAmbassadorException {
+	private void enableAsynchronousDelivery() {
 		try {
 			log.info("enabling asynchronous delivery of receive order messages");
 			rtiAmb.enableAsynchronousDelivery();
@@ -427,7 +424,7 @@ public class InjectionFederate implements Runnable {
 		}
 	}
 
-	private void enableTimeConstrained() throws RTIAmbassadorException {
+	private void enableTimeConstrained() {
 		try {
 			log.info("enabling time constrained");
 			rtiAmb.enableTimeConstrained();
@@ -443,7 +440,7 @@ public class InjectionFederate implements Runnable {
 		}
 	}
 
-	private void enableTimeRegulation() throws RTIAmbassadorException {
+	private void enableTimeRegulation() {
 		try {
 			log.info("enabling time regulation");
 			rtiAmb.enableTimeRegulation(new DoubleTime(fedAmb.getLogicalTime()), new DoubleTimeInterval(lookahead));
@@ -459,7 +456,7 @@ public class InjectionFederate implements Runnable {
 		}
 	}
 
-	ObjectModelType loadFOM() {
+	private ObjectModelType loadFOM() {
 		Deserialize.associateExtension("xml", new _2010ResourceFactoryImpl());
 		Deserialize.registerPackage(_2010Package.eNS_URI, _2010Package.eINSTANCE);
 		DocumentRoot docRoot = (DocumentRoot) Deserialize.it(fomFilePath);
@@ -739,7 +736,7 @@ public class InjectionFederate implements Runnable {
 		return ("" + System.currentTimeMillis()).getBytes();
 	}
 
-	private void synchronize(String label) throws RTIAmbassadorException {
+	private void synchronize(String label) {
 		log.info("waiting for announcement of the synchronization point " + label);
 		while (!fedAmb.isSynchronizationPointPending(label)) {
 			tick();
@@ -760,7 +757,7 @@ public class InjectionFederate implements Runnable {
 		log.info("federation synchronized on " + label);
 	}
 
-	public Double advanceLogicalTime() throws RTIAmbassadorException {
+	public Double advanceLogicalTime() {
 		advancing.set(true);
 		logicalTime = fedAmb.getLogicalTime() + stepsize;
 		log.info("advancing logical time to " + logicalTime);
@@ -778,7 +775,7 @@ public class InjectionFederate implements Runnable {
 		return logicalTime;
 	}
 
-	private void resignFederationExecution() throws RTIAmbassadorException {
+	private void resignFederationExecution() {
 		log.info("resigning from the federation execution " + federationName);
 		try {
 			rtiAmb.resignFederationExecution(ResignAction.NO_ACTION);

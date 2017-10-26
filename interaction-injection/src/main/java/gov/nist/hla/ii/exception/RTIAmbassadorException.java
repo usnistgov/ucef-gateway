@@ -1,6 +1,6 @@
 package gov.nist.hla.ii.exception;
 
-public class RTIAmbassadorException extends Exception {
+public class RTIAmbassadorException extends RuntimeException {
   public RTIAmbassadorException(String message) {
     super(message);
   }
