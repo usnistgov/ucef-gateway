@@ -4,12 +4,17 @@ import java.util.Map;
 import java.util.Queue;
 
 public interface InjectionCallback {
-
-    Queue<HLAPacket> getPreSynchPublications();
-
     Queue<HLAPacket> getPublications(Double logicalTime);
+    
+    void receiveInteraction(Double timeStep, String interactionClass, Map<String, String> parameters);
 
-    void addObject(String objectClass, Map<String, String> attributes);
+    void receiveObject(Double timeStep, String objectClass, String objectName, Map<String, String> attributes);
+    
+    void initializeSelf();
 
-    void addInteraction(String interactionClass, Map<String, String> parameters);
+    void initializeWithPeers();
+
+    void beforeTimeStep(Double timeStep);
+
+    void afterTimeStep(Double timeStep);
 }
