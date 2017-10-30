@@ -16,16 +16,9 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.cpswt.hla.SynchronizationPoints;
-import org.eclipse.emf.ecore.EObject;
 import org.ieee.standards.ieee1516._2010.AttributeType;
-import org.ieee.standards.ieee1516._2010.DocumentRoot;
 import org.ieee.standards.ieee1516._2010.InteractionClassType;
 import org.ieee.standards.ieee1516._2010.ObjectClassType;
-import org.ieee.standards.ieee1516._2010.ObjectModelType;
-import org.ieee.standards.ieee1516._2010.SharingEnumerations;
-import org.ieee.standards.ieee1516._2010.SharingType;
-import org.ieee.standards.ieee1516._2010._2010Package;
-import org.ieee.standards.ieee1516._2010.util._2010ResourceFactoryImpl;
 import org.portico.impl.hla13.types.DoubleTime;
 import org.portico.impl.hla13.types.DoubleTimeInterval;
 
@@ -33,7 +26,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import gov.nist.hla.ii.config.InjectionFederateConfig;
 import gov.nist.hla.ii.exception.RTIAmbassadorException;
-import gov.nist.sds4emf.Deserialize;
 import hla.rti.AsynchronousDeliveryAlreadyEnabled;
 import hla.rti.AttributeHandleSet;
 import hla.rti.AttributeNotDefined;
@@ -69,6 +61,7 @@ import hla.rti.TimeRegulationAlreadyEnabled;
 import hla.rti.jlc.RtiFactoryFactory;
 
 // assume that SIMULATION_END is not sent as a Receive Order message
+// no schema validation of name fields
 // we cannot inject receive order messages
 // we cannot inject future messages (at specific time)
 // do we notify discovered/removed object instances?
@@ -83,16 +76,15 @@ public class InjectionFederate implements Runnable {
     
     private RTIambassador rtiAmb;
     private FederateAmbassador fedAmb;
-    private ObjectModelType objectModel;
+    private ObjectModel objectModel;
     
     private Map<String, Integer> registeredObjects = new HashMap<String, Integer>();
-    private Map<ObjectClassType, String> objectClassPath = new HashMap<ObjectClassType, String>();
-    private Map<InteractionClassType, String> interactionClassPath = new HashMap<InteractionClassType, String>();
     
     private boolean receivedSimEnd = false;
     private boolean exitFlagSet = false;
     
-    public static InjectionFederateConfig readConfiguration(String filepath) throws IOException {
+    public static InjectionFederateConfig readConfiguration(String filepath)
+            throws IOException {
         log.debug("reading JSON configuration file at " + filepath);
         Path configPath = Paths.get(filepath);
         File configFile = configPath.toFile();
@@ -110,15 +102,7 @@ public class InjectionFederate implements Runnable {
             throw new RTIAmbassadorException(e);
         }
         fedAmb = new FederateAmbassador();
-        objectModel = loadObjectModel();
-    }
-    
-    protected ObjectModelType loadObjectModel() {
-        log.trace("loadObjectModel");
-        Deserialize.associateExtension("xml", new _2010ResourceFactoryImpl());
-        Deserialize.registerPackage(_2010Package.eNS_URI, _2010Package.eINSTANCE);
-        DocumentRoot docRoot = (DocumentRoot) Deserialize.it(configuration.getFomFile());
-        return docRoot.getObjectModel();
+        objectModel = new ObjectModel(configuration.getFomFile());
     }
     
     public void run() {
@@ -171,7 +155,8 @@ public class InjectionFederate implements Runnable {
         return receivedSimEnd || exitFlagSet;
     }
     
-    private void joinFederationExecution() throws InterruptedException {
+    private void joinFederationExecution()
+            throws InterruptedException {
         boolean joinSuccessful = false;
         
         for (int i = 0; !joinSuccessful && i < configuration.getMaxReconnectAttempts(); i++) {
@@ -242,114 +227,31 @@ public class InjectionFederate implements Runnable {
         }
     }
     
-    public Set<InteractionClassType> getSubscribedInteractions() {
-        Set<InteractionClassType> result = new HashSet<InteractionClassType>();
-        InteractionClassType interactionRoot = objectModel.getInteractions().getInteractionClass();
-        return getFilteredInteractions(interactionRoot, SharingEnumerations.SUBSCRIBE, result);
-    }
-    
-    public Set<InteractionClassType> getPublishedInteractions() {
-        Set<InteractionClassType> result = new HashSet<InteractionClassType>();
-        InteractionClassType interactionRoot = objectModel.getInteractions().getInteractionClass();
-        return getFilteredInteractions(interactionRoot, SharingEnumerations.PUBLISH, result);
-    }
-    
-    private Set<InteractionClassType> getFilteredInteractions(InteractionClassType interaction,
-            final SharingEnumerations type, Set<InteractionClassType> result) {
-        if (interaction.getSharing() != null) {
-            if (interaction.getSharing().getValue() == type
-                    || interaction.getSharing().getValue() == SharingEnumerations.PUBLISH_SUBSCRIBE) {
-                result.add(interaction);
-            }
-        }
-        for (InteractionClassType child : interaction.getInteractionClass()) {
-            getFilteredInteractions(child, type, result);
-        }
-        return result;
-    }
-    
-    public Set<ObjectClassType> getSubscribedObjects() {
-        Set<ObjectClassType> result = new HashSet<ObjectClassType>();
-        ObjectClassType objectRoot = objectModel.getObjects().getObjectClass();
-        return getFilteredObjects(objectRoot, SharingEnumerations.SUBSCRIBE, result);
-    }
-    
-    public Set<ObjectClassType> getPublishedObjects() {
-        Set<ObjectClassType> result = new HashSet<ObjectClassType>();
-        ObjectClassType objectRoot = objectModel.getObjects().getObjectClass();
-        return getFilteredObjects(objectRoot, SharingEnumerations.PUBLISH, result);
-    }
-    
-    // follow hla convention that sharing tag for object is based on its attributes
-    private Set<ObjectClassType> getFilteredObjects(ObjectClassType object,
-            final SharingEnumerations type, Set<ObjectClassType> result) {
-        if (object.getSharing() != null) {
-            if (object.getSharing().getValue() == type
-                    || object.getSharing().getValue() == SharingEnumerations.PUBLISH_SUBSCRIBE) {
-                result.add(object);
-            }
-        }
-        for (ObjectClassType child : object.getObjectClass()) {
-            getFilteredObjects(child, type, result);
-        }
-        return result;
-    }
-    
     private void publishAndSubscribe() {
         try {
-            for (InteractionClassType classType : getSubscribedInteractions()) {
-                subscribeInteraction(getInteractionClassPath(classType));
+            for (InteractionClassType classType : objectModel.getSubscribedInteractions()) {
+                subscribeInteraction(objectModel.getClassPath(classType));
             }
-            for (InteractionClassType classType : getPublishedInteractions()) {
-                publishInteraction(getInteractionClassPath(classType));
+            for (InteractionClassType classType : objectModel.getPublishedInteractions()) {
+                publishInteraction(objectModel.getClassPath(classType));
             }
-            for (ObjectClassType classType : getSubscribedObjects()) {
-                subscribeObject(getObjectClassPath(classType), getSubscribedAttributes(classType));
+            for (ObjectClassType classType : objectModel.getSubscribedObjects()) {
+                Set<String> attributeNames = new HashSet<String>();
+                for (AttributeType attribute : objectModel.getSubscribedAttributes(classType)) {
+                    attributeNames.add(attribute.getName().getValue());
+                }
+                subscribeObject(objectModel.getClassPath(classType), attributeNames);
             }
-            for (ObjectClassType classType : getPublishedObjects()) {
-                publishObject(getObjectClassPath(classType), getPublishedAttributes(classType));
+            for (ObjectClassType classType : objectModel.getPublishedObjects()) {
+                Set<String> attributeNames = new HashSet<String>();
+                for (AttributeType attribute : objectModel.getPublishedAttributes(classType)) {
+                    attributeNames.add(attribute.getName().getValue());
+                }
+                publishObject(objectModel.getClassPath(classType), attributeNames);
             }
         } catch (NameNotFound | FederateNotExecutionMember | AttributeNotDefined e) {
             throw new RTIAmbassadorException(e);
         }
-    }
-    
-    private Set<String> getPublishedAttributes(ObjectClassType object) {
-        Set<String> publishedAttributes = new HashSet<String>();
-        for (AttributeType attribute : object.getAttribute()) {
-            if (attribute.getName() == null) {
-                continue;
-            }
-            String name = attribute.getName().getValue();
-            SharingType sharing = attribute.getSharing();
-            if (sharing == null) {
-                continue;
-            }
-            SharingEnumerations sharingVal = sharing.getValue();
-            if (sharingVal == SharingEnumerations.PUBLISH_SUBSCRIBE || sharingVal == SharingEnumerations.PUBLISH) {
-                publishedAttributes.add(name);
-            }
-        }
-        return publishedAttributes;
-    }
-    
-    private Set<String> getSubscribedAttributes(ObjectClassType object) {
-        Set<String> subscribedAttributes = new HashSet<String>();
-        for (AttributeType attribute : object.getAttribute()) {
-            if (attribute.getName() == null) {
-                continue;
-            }
-            String name = attribute.getName().getValue();
-            SharingType sharing = attribute.getSharing();
-            if (sharing == null) {
-                continue;
-            }
-            SharingEnumerations sharingVal = sharing.getValue();
-            if (sharingVal == SharingEnumerations.PUBLISH_SUBSCRIBE || sharingVal == SharingEnumerations.SUBSCRIBE) {
-                subscribedAttributes.add(name);
-            }
-        }
-        return subscribedAttributes;
     }
     
     private void publishInteraction(String classPath)
@@ -444,42 +346,8 @@ public class InjectionFederate implements Runnable {
         }
     }
     
-    public boolean isPublished(String classPath) {
-        if (classPath.toLowerCase().contains("interactionroot")) {
-            for (InteractionClassType publication : getPublishedInteractions()) {
-                if (getInteractionClassPath(publication).equals(classPath)) {
-                    return true;
-                }
-            }
-        } else if (classPath.toLowerCase().contains("objectroot")) {
-            for (ObjectClassType publication : getPublishedObjects()) {
-                if (getObjectClassPath(publication).equals(classPath)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-    
-    public boolean isSubscribed(String classPath) {
-        if (classPath.toLowerCase().contains("interactionroot")) {
-            for (InteractionClassType subscription : getSubscribedInteractions()) {
-                if (getInteractionClassPath(subscription).equals(classPath)) {
-                    return true;
-                }
-            }
-        } else if (classPath.toLowerCase().contains("objectroot")) {
-            for (ObjectClassType subscription : getSubscribedObjects()) {
-                if (getObjectClassPath(subscription).equals(classPath)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-    
     public void notifyOfFederationJoin() {
-        if (!isPublished(FEDERATE_JOIN)) {
+        if (!objectModel.getPublishedInteractions().contains(FEDERATE_JOIN)) {
             try {
                 publishInteraction(FEDERATE_JOIN);
             } catch (NameNotFound | FederateNotExecutionMember e) {
@@ -768,31 +636,7 @@ public class InjectionFederate implements Runnable {
         return instanceHandle;
     }
     
-    private String getInteractionClassPath(InteractionClassType interaction) {
-        if (!interactionClassPath.containsKey(interaction)) {
-            String classPath = interaction.getName().getValue();
-            EObject parent = interaction.eContainer();
-            while (parent != null && parent instanceof InteractionClassType) {
-                InteractionClassType parentInteraction = (InteractionClassType) parent;
-                classPath = parentInteraction.getName().getValue() + "." + classPath;
-                parent = parent.eContainer();
-            }
-            interactionClassPath.put(interaction, classPath);
-        }
-        return interactionClassPath.get(interaction);
-    }
-
-    private String getObjectClassPath(ObjectClassType object) {
-        if (!objectClassPath.containsKey(object)) {
-            String classPath = object.getName().getValue();
-            EObject parent = object.eContainer();
-            while (parent != null && parent instanceof ObjectClassType) {
-                ObjectClassType parentObject = (ObjectClassType) parent;
-                classPath = parentObject.getName().getValue() + "." + classPath;
-                parent = parent.eContainer();
-            }
-            objectClassPath.put(object, classPath);
-        }
-        return objectClassPath.get(object);
+    public ObjectModel getObjectModel() {
+        return objectModel;
     }
 }
