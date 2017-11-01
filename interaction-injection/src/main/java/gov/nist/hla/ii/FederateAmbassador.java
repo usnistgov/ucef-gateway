@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
@@ -33,40 +34,44 @@ public class FederateAmbassador extends NullFederateAmbassador {
     private static final Logger log = LogManager.getLogger();
 
     private class ObjectDetails {
-        private int objectHandle;
-        private int objectClass;
-        private String objectName;
+        private int classHandle;
+        private int instanceHandle;
+        private String instanceName;
 
-        public ObjectDetails(int objectHandle, int objectClass, String objectName) {
-            this.objectHandle = objectHandle;
-            this.objectClass = objectClass;
-            this.objectName = objectName;
+        public ObjectDetails(int classHandle, int instanceHandle, String instanceName) {
+            this.classHandle = classHandle;
+            this.instanceHandle = instanceHandle;
+            this.instanceName = instanceName;
         }
 
-        public int getObjectHandle() {
-            return objectHandle;
+        public int getClassHandle() {
+            return classHandle;
+        }
+        
+        public int getInstanceHandle() {
+            return instanceHandle;
         }
 
-        public int getObjectClass() {
-            return objectClass;
+        public String getInstanceName() {
+            return instanceName;
         }
-
-        public String getObjectName() {
-            return objectName;
+        
+        public String toString() {
+            return String.format("name=%s handle=%d class=%d", instanceName, instanceHandle, classHandle);
         }
     }
 
-    // synchronization point labels that have been announced but not achieved
+    // set of synchronization points that have been announced but not achieved
     private Set<String> pendingSynchronizationPoints = new HashSet<String>();
 
-    // map the handle for a discovered object instance to its associated ObjectDetails
+    // map the instance handle of a discovered object to its associated ObjectDetails
     private Map<Integer, ObjectDetails> objectInstances = new HashMap<Integer, ObjectDetails>();
 
     // names of previously discovered object instances that have since been removed
-    private LinkedList<String> removedObjectNames = new LinkedList<String>();
+    private Queue<String> removedObjectInstances = new LinkedList<String>();
 
-    private LinkedList<Interaction> receivedInteractions = new LinkedList<Interaction>();
-    private LinkedList<ObjectReflection> receivedObjectReflections = new LinkedList<ObjectReflection>();
+    private Queue<Interaction> receivedInteractions = new LinkedList<Interaction>();
+    private Queue<ObjectReflection> receivedObjectReflections = new LinkedList<ObjectReflection>();
 
     private boolean isTimeAdvancing = false;
     private boolean isTimeRegulating = false;
@@ -107,7 +112,7 @@ public class FederateAmbassador extends NullFederateAmbassador {
             throws InvalidFederationTime, TimeAdvanceWasNotInProgress, FederateInternalError {
         isTimeAdvancing = false;
         logicalTime = convertTime(theTime);
-        log.debug("time advance granted: t=" + logicalTime);
+        log.info("time advance granted: t=" + logicalTime);
     }
 
     public void receiveInteraction(int interactionClass, ReceivedInteraction theInteraction, byte[] userSuppliedTag)
@@ -130,10 +135,12 @@ public class FederateAmbassador extends NullFederateAmbassador {
 
     public void discoverObjectInstance(int theObject, int theObjectClass, String objectName)
             throws CouldNotDiscover, ObjectClassNotKnown, FederateInternalError {
-        if (objectInstances.put(theObject, new ObjectDetails(theObject, theObjectClass, objectName)) != null) {
+        ObjectDetails details = new ObjectDetails(theObjectClass, theObject, objectName);
+        if (objectInstances.put(theObject, details) != null) {
+            log.error("duplicate object " + details);
             throw new FederateInternalError("discovered multiple object instances with handle " + theObject);
         }
-        log.info("discovered object=" + objectName + " handle="+ theObject + "class=" + theObjectClass);
+        log.info("discovered object " + details);
     }
 
     public void reflectAttributeValues(int theObject, ReflectedAttributes theAttributes, byte[] userSuppliedTag)
@@ -151,11 +158,12 @@ public class FederateAmbassador extends NullFederateAmbassador {
             FederateInternalError {
         ObjectDetails details = objectInstances.get(theObject);
         if (details == null) {
+            log.error("unknown object " + details);
             throw new ObjectNotKnown("no discovered object instance with handle " + theObject);
         }
-        int theObjectClass = details.getObjectClass();
-        String objectName = details.getObjectName();
-        ObjectReflection newObjectReflection = new ObjectReflection(theObjectClass, objectName, theAttributes);
+        int classHandle = details.getClassHandle();
+        String instanceName = details.getInstanceName();
+        ObjectReflection newObjectReflection = new ObjectReflection(classHandle, instanceName, theAttributes);
         receivedObjectReflections.add(newObjectReflection);
         log.debug("received " + newObjectReflection.toString());
     }
@@ -174,11 +182,12 @@ public class FederateAmbassador extends NullFederateAmbassador {
             throws ObjectNotKnown, InvalidFederationTime, FederateInternalError {
         ObjectDetails details = objectInstances.remove(theObject);
         if (details == null) {
+            log.error("unknown object " + details);
             throw new ObjectNotKnown("no discovered object instance with handle " + theObject);
         }
-        String objectName = details.getObjectName();
-        removedObjectNames.add(objectName);
-        log.info("received removal notice for object=" + objectName + " handle=" + theObject);
+        String instanceName = details.getInstanceName();
+        removedObjectInstances.add(instanceName);
+        log.info("removed object " + details);
     }
 
     public boolean isSynchronizationPointPending(String label) {
@@ -206,15 +215,15 @@ public class FederateAmbassador extends NullFederateAmbassador {
     }
 
     public Interaction nextInteraction() {
-        return receivedInteractions.pollFirst(); // destructive read
+        return receivedInteractions.poll(); // destructive read
     }
 
     public ObjectReflection nextObjectReflection() {
-        return receivedObjectReflections.pollFirst(); // destructive read
+        return receivedObjectReflections.poll(); // destructive read
     }
 
     public String nextRemovedObjectName() {
-        return removedObjectNames.pollFirst(); // destructive read
+        return removedObjectInstances.poll(); // destructive read
     }
 
     private double convertTime(LogicalTime logicalTime) {
