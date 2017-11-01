@@ -6,9 +6,9 @@ import java.util.Queue;
 public interface InjectionCallback {
     Queue<HLAPacket> getPublications(Double logicalTime);
     
-    void receiveInteraction(Double timeStep, String interactionClass, Map<String, String> parameters);
+    void receiveInteraction(Double timeStep, String className, Map<String, String> parameters);
 
-    void receiveObject(Double timeStep, String objectClass, String objectName, Map<String, String> attributes);
+    void receiveObject(Double timeStep, String className, String instanceName, Map<String, String> attributes);
     
     void initializeSelf();
 
@@ -17,4 +17,6 @@ public interface InjectionCallback {
     void beforeTimeStep(Double timeStep);
 
     void afterTimeStep(Double timeStep);
+    
+    void afterResignation();
 }

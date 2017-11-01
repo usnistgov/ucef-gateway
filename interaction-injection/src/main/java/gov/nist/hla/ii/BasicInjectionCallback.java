@@ -13,37 +13,61 @@ public class BasicInjectionCallback implements InjectionCallback {
     protected Queue<HLAPacket> publications = new ConcurrentLinkedQueue<HLAPacket>();
     
     protected void addObject(int instanceHandle, Map<String, String> attributes) {
-        publications.add(new HLAPacket(instanceHandle, attributes, HLAPacket.TYPE.OBJECT));
+        HLAPacket newPublication = new HLAPacket(instanceHandle, attributes, HLAPacket.TYPE.OBJECT);
+        publications.add(newPublication);
+        log.debug("added publication for " + newPublication.toString());
     }
     
     protected void addObject(String instanceName, Map<String, String> attributes) {
-        publications.add(new HLAPacket(instanceName, attributes, HLAPacket.TYPE.OBJECT));
+        HLAPacket newPublication = new HLAPacket(instanceName, attributes, HLAPacket.TYPE.OBJECT);
+        publications.add(newPublication);
+        log.debug("added publication for " + newPublication.toString());
     }
 
-    protected void addInteraction(String interactionClass, Map<String, String> parameters) {
-        publications.add(new HLAPacket(interactionClass, parameters, HLAPacket.TYPE.INTERACTION));
+    protected void addInteraction(String className, Map<String, String> parameters) {
+        HLAPacket newPublication = new HLAPacket(className, parameters, HLAPacket.TYPE.INTERACTION);
+        publications.add(newPublication);
+        log.debug("added publication for " + newPublication.toString());
     }
 
     @Override
     public Queue<HLAPacket> getPublications(Double logicalTime) {
+        log.trace("default getPublications callback");
         return publications;
     }
     
     @Override
-    public void receiveInteraction(Double timeStep, String interactionClass, Map<String, String> parameters) {}
+    public void receiveInteraction(Double timeStep, String className, Map<String, String> parameters) {
+        log.trace("default receiveInteraction callback");
+    }
 
     @Override
-    public void receiveObject(Double timeStep, String objectClass, String objectName, Map<String, String> attributes) {}
+    public void receiveObject(Double timeStep, String className, String instanceName, Map<String, String> attributes) {
+        log.trace("default receiveObject callback");
+    }
     
     @Override
-    public void initializeSelf() {}
+    public void initializeSelf() {
+        log.trace("default initializeSelf callback");
+    }
 
     @Override
-    public void initializeWithPeers() {}
+    public void initializeWithPeers() {
+        log.trace("default initializeWithPeers callback");
+    }
 
     @Override
-    public void beforeTimeStep(Double timeStep) {}
+    public void beforeTimeStep(Double timeStep) {
+        log.trace("default beforeTimeStep callback");
+    }
 
     @Override
-    public void afterTimeStep(Double timeStep) {}
+    public void afterTimeStep(Double timeStep) {
+        log.trace("default afterTimeStep callback");
+    }
+    
+    @Override
+    public void afterResignation() {
+        log.trace("default afterResignation callback");
+    }
 }
