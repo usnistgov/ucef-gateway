@@ -12,12 +12,6 @@ public class BasicInjectionCallback implements InjectionCallback {
     
     protected Queue<HLAPacket> publications = new ConcurrentLinkedQueue<HLAPacket>();
     
-    protected void addObject(int instanceHandle, Map<String, String> attributes) {
-        HLAPacket newPublication = new HLAPacket(instanceHandle, attributes, HLAPacket.TYPE.OBJECT);
-        publications.add(newPublication);
-        log.debug("added publication for " + newPublication.toString());
-    }
-    
     protected void addObject(String instanceName, Map<String, String> attributes) {
         HLAPacket newPublication = new HLAPacket(instanceName, attributes, HLAPacket.TYPE.OBJECT);
         publications.add(newPublication);

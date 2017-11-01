@@ -78,7 +78,8 @@ public class InjectionFederate implements Runnable {
     private FederateAmbassador fedAmb;
     private ObjectModel objectModel;
     
-    private Map<String, Integer> registeredObjects = new HashMap<String, Integer>();
+    private Map<String, Integer> registeredObjectsByName = new HashMap<String, Integer>();
+    private Map<Integer, String> registeredObjectsByHandle = new HashMap<Integer, String>();
     
     private boolean receivedSimEnd = false;
     private boolean exitFlagSet = false;
@@ -103,6 +104,10 @@ public class InjectionFederate implements Runnable {
         }
         fedAmb = new FederateAmbassador();
         objectModel = new ObjectModel(configuration.getFomFilepath());
+    }
+    
+    public String getObjectInstanceName(int instanceHandle) {
+        return registeredObjectsByHandle.get(instanceHandle);
     }
     
     public void run() {
@@ -493,7 +498,7 @@ public class InjectionFederate implements Runnable {
 
         HLAPacket packet = null;
         while ((packet = publications.poll()) != null) {
-            if (packet.getType() == HLAPacket.TYPE.OBJECT) {
+            if (packet.isObject()) {
                 try {
                     updateObject(packet);
                 } catch (NameNotFound | FederateNotExecutionMember | ObjectNotKnown | AttributeNotDefined
@@ -610,7 +615,8 @@ public class InjectionFederate implements Runnable {
             throw new RTIAmbassadorException(e);
         }
         
-        registeredObjects.put(instanceName, instanceHandle);
+        registeredObjectsByName.put(instanceName, instanceHandle);
+        registeredObjectsByHandle.put(instanceHandle, instanceName);
         return instanceHandle;
     }
     
@@ -632,7 +638,8 @@ public class InjectionFederate implements Runnable {
             throw new RTIAmbassadorException(e);
         }
         
-        registeredObjects.put(instanceName, instanceHandle);
+        registeredObjectsByName.put(instanceName, instanceHandle);
+        registeredObjectsByHandle.put(instanceHandle, instanceName);
         return instanceHandle;
     }
     
