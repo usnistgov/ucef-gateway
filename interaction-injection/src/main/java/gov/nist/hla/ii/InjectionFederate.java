@@ -65,6 +65,7 @@ import hla.rti.jlc.RtiFactoryFactory;
 // we cannot inject receive order messages
 // we cannot inject future messages (at specific time)
 // do we notify discovered/removed object instances?
+// no dynamic publish/subscribe capability
 public class InjectionFederate implements Runnable {
     private static final Logger log = LogManager.getLogger();
 
@@ -77,9 +78,6 @@ public class InjectionFederate implements Runnable {
     private RTIambassador rtiAmb;
     private FederateAmbassador fedAmb;
     private ObjectModel objectModel;
-    
-    private Map<String, Integer> registeredObjectsByName = new HashMap<String, Integer>();
-    private Map<Integer, String> registeredObjectsByHandle = new HashMap<Integer, String>();
     
     private boolean receivedSimEnd = false;
     private boolean exitFlagSet = false;
@@ -106,8 +104,56 @@ public class InjectionFederate implements Runnable {
         objectModel = new ObjectModel(configuration.getFomFilepath());
     }
     
-    public String getObjectInstanceName(int instanceHandle) {
-        return registeredObjectsByHandle.get(instanceHandle);
+    public String createObjectInstance(String className)
+            throws NameNotFound, ObjectClassNotPublished {
+        int classHandle;
+        int instanceHandle;
+        String instanceName;
+        
+        try {
+            classHandle = rtiAmb.getObjectClassHandle(className);
+        } catch (FederateNotExecutionMember | RTIinternalError e) {
+            throw new RTIAmbassadorException(e);
+        }
+        
+        try {
+            instanceHandle = rtiAmb.registerObjectInstance(classHandle);
+        } catch (ObjectClassNotDefined | FederateNotExecutionMember | SaveInProgress | RestoreInProgress
+                | RTIinternalError | ConcurrentAccessAttempted e) {
+            throw new RTIAmbassadorException(e);
+        }
+        
+        try {
+            instanceName = rtiAmb.getObjectInstanceName(instanceHandle);
+        } catch (ObjectNotKnown | FederateNotExecutionMember | RTIinternalError e) {
+            throw new RTIAmbassadorException(e);
+        }
+        
+        return instanceName;
+    }
+    
+    public String createObjectInstance(String className, String instanceName)
+            throws NameNotFound, ObjectClassNotPublished, ObjectAlreadyRegistered {
+        int classHandle;
+        
+        try {
+            classHandle = rtiAmb.getObjectClassHandle(className);
+        } catch (FederateNotExecutionMember | RTIinternalError e) {
+            throw new RTIAmbassadorException(e);
+        }
+        
+        try {
+            rtiAmb.registerObjectInstance(classHandle, instanceName);
+        } catch (ObjectClassNotDefined | FederateNotExecutionMember | SaveInProgress | RestoreInProgress
+                | RTIinternalError | ConcurrentAccessAttempted e) {
+            throw new RTIAmbassadorException(e);
+        }
+        
+        return instanceName;
+    }
+    
+    public ObjectModel getObjectModel() {
+        return objectModel;
     }
     
     public void run() {
@@ -144,6 +190,7 @@ public class InjectionFederate implements Runnable {
             synchronize(SynchronizationPoints.ReadyToResign);
         }
         resignFederationExecution();
+        injectionCallback.afterResignation();
     }
     
     public double getLogicalTime() {
@@ -154,6 +201,66 @@ public class InjectionFederate implements Runnable {
         // it will take 1 iteration to exit
         log.debug("exit requested");
         this.exitFlagSet = true;
+    }
+    
+    public void tick() {
+        try {
+            rtiAmb.tick();
+            handleSubscriptions();
+        } catch (RTIinternalError | ConcurrentAccessAttempted e) {
+            throw new RTIAmbassadorException(e);
+        }
+    }
+    
+    public void synchronize(String label) {
+        log.info("waiting for announcement of the synchronization point " + label);
+        while (!fedAmb.isSynchronizationPointPending(label)) {
+            tick();
+        }
+
+        try {
+            synchronized (rtiAmb) {
+                rtiAmb.synchronizationPointAchieved(label);
+            }
+        } catch (RTIexception e) {
+            throw new RTIAmbassadorException(e);
+        }
+
+        log.info("waiting for federation to synchronize on synchronization point " + label);
+        while (!fedAmb.isSynchronizationPointPending(label)) {
+            tick();
+        }
+        log.info("federation synchronized on " + label);
+    }
+    
+    // private methods
+    
+    private void injectInteraction(HLAPacket packet)
+            throws NameNotFound, FederateNotExecutionMember, InteractionClassNotPublished, InteractionParameterNotDefined {
+        injectInteraction(packet.getName(), packet.getFields());
+    }
+    
+    private void updateObject(HLAPacket packet)
+            throws NameNotFound, FederateNotExecutionMember, ObjectNotKnown, AttributeNotDefined, AttributeNotOwned {
+        updateObject(packet.getName(), packet.getFields());
+    }
+    
+    private void injectInteraction(String interactionName, Map<String, String> parameters)
+            throws NameNotFound, FederateNotExecutionMember, InteractionClassNotPublished, InteractionParameterNotDefined {
+        try {
+            int interactionHandle = rtiAmb.getInteractionClassHandle(interactionName);
+            LogicalTime timestamp = new DoubleTime(fedAmb.getLogicalTime() + configuration.getLookAhead());
+            SuppliedParameters suppliedParameters = assembleParameters(interactionHandle, parameters);
+            rtiAmb.sendInteraction(interactionHandle, suppliedParameters, null, timestamp);
+        } catch (RTIinternalError | ConcurrentAccessAttempted | InvalidFederationTime e) {
+            throw new RTIAmbassadorException(e);
+        } catch (InteractionClassNotDefined e) {
+            log.fatal("unreachable code block in injectInteraction");
+            throw new RTIAmbassadorException(e);
+        } catch (SaveInProgress | RestoreInProgress e) {
+            log.fatal("save/restore services not supported");
+            throw new RTIAmbassadorException(e);
+        }
     }
 
     private boolean isExitCondition() {
@@ -296,12 +403,12 @@ public class InjectionFederate implements Runnable {
         }
     }
 
-    public void publishObject(String classPath, Set<String> attributes)
+    private void publishObject(String classPath, Set<String> attributes)
             throws NameNotFound, FederateNotExecutionMember, AttributeNotDefined {
         publishObject(classPath, attributes.toArray(new String[0]));
     }
     
-    public void publishObject(String classPath, String... attributes)
+    private void publishObject(String classPath, String... attributes)
             throws NameNotFound, FederateNotExecutionMember, AttributeNotDefined {
         try {
             int classHandle = rtiAmb.getObjectClassHandle(classPath);
@@ -322,12 +429,12 @@ public class InjectionFederate implements Runnable {
         }
     }
     
-    public void subscribeObject(String classPath, Set<String> attributes)
+    private void subscribeObject(String classPath, Set<String> attributes)
             throws NameNotFound, FederateNotExecutionMember, AttributeNotDefined {
         subscribeObject(classPath, attributes.toArray(new String[0]));
     }
     
-    public void subscribeObject(String classPath, String... attributes)
+    private void subscribeObject(String classPath, String... attributes)
             throws NameNotFound, FederateNotExecutionMember, AttributeNotDefined {
         try {
             int classHandle = rtiAmb.getObjectClassHandle(classPath);
@@ -351,7 +458,7 @@ public class InjectionFederate implements Runnable {
         }
     }
     
-    public void notifyOfFederationJoin() {
+    private void notifyOfFederationJoin() {
         if (!objectModel.getPublishedInteractions().contains(FEDERATE_JOIN)) {
             try {
                 publishInteraction(FEDERATE_JOIN);
@@ -376,26 +483,8 @@ public class InjectionFederate implements Runnable {
         }
     }
     
-    public void injectInteraction(String interactionName, Map<String, String> parameters)
-            throws NameNotFound, FederateNotExecutionMember, InteractionClassNotPublished, InteractionParameterNotDefined {
-        try {
-            int interactionHandle = rtiAmb.getInteractionClassHandle(interactionName);
-            LogicalTime timestamp = new DoubleTime(fedAmb.getLogicalTime() + configuration.getLookAhead());
-            SuppliedParameters suppliedParameters = assembleParameters(interactionHandle, parameters);
-            rtiAmb.sendInteraction(interactionHandle, suppliedParameters, null, timestamp);
-        } catch (RTIinternalError | ConcurrentAccessAttempted | InvalidFederationTime e) {
-            throw new RTIAmbassadorException(e);
-        } catch (InteractionClassNotDefined e) {
-            log.fatal("unreachable code block in injectInteraction");
-            throw new RTIAmbassadorException(e);
-        } catch (SaveInProgress | RestoreInProgress e) {
-            log.fatal("save/restore services not supported");
-            throw new RTIAmbassadorException(e);
-        }
-    }
-    
     // do we need to add \0 ?
-    public SuppliedParameters assembleParameters(int interactionHandle, Map<String, String> parameters)
+    private SuppliedParameters assembleParameters(int interactionHandle, Map<String, String> parameters)
             throws RTIinternalError, InteractionClassNotDefined, NameNotFound, FederateNotExecutionMember {
         SuppliedParameters suppliedParameters = RtiFactoryFactory.getRtiFactory().createSuppliedParameters();
         for (Map.Entry<String, String> entry : parameters.entrySet()) {
@@ -404,27 +493,6 @@ public class InjectionFederate implements Runnable {
             suppliedParameters.add(parameterHandle, parameterValue);
         }
         return suppliedParameters;
-    }
-    
-    private void synchronize(String label) {
-        log.info("waiting for announcement of the synchronization point " + label);
-        while (!fedAmb.isSynchronizationPointPending(label)) {
-            tick();
-        }
-
-        try {
-            synchronized (rtiAmb) {
-                rtiAmb.synchronizationPointAchieved(label);
-            }
-        } catch (RTIexception e) {
-            throw new RTIAmbassadorException(e);
-        }
-
-        log.info("waiting for federation to synchronize on synchronization point " + label);
-        while (!fedAmb.isSynchronizationPointPending(label)) {
-            tick();
-        }
-        log.info("federation synchronized on " + label);
     }
     
     private void handleSubscriptions() {
@@ -459,7 +527,7 @@ public class InjectionFederate implements Runnable {
         }
     }
     
-    Map<String, String> mapParameters(Interaction receivedInteraction) {
+    private Map<String, String> mapParameters(Interaction receivedInteraction) {
         int interactionHandle = receivedInteraction.getClassHandle();
         Map<String, String> parameters = new HashMap<String, String>();
         try {
@@ -476,7 +544,7 @@ public class InjectionFederate implements Runnable {
         return parameters;
     }
 
-    Map<String, String> mapAttributes(int objectClassHandle, ObjectReflection receivedObjectReflection) {
+    private Map<String, String> mapAttributes(int objectClassHandle, ObjectReflection receivedObjectReflection) {
         Map<String, String> attributes = new HashMap<String, String>();
         try {
             for (int i = 0; i < receivedObjectReflection.getAttributeCount(); i++) {
@@ -516,17 +584,7 @@ public class InjectionFederate implements Runnable {
         }
     }
     
-    public void injectInteraction(HLAPacket packet)
-            throws NameNotFound, FederateNotExecutionMember, InteractionClassNotPublished, InteractionParameterNotDefined {
-        injectInteraction(packet.getName(), packet.getFields());
-    }
-    
-    public void updateObject(HLAPacket packet)
-            throws NameNotFound, FederateNotExecutionMember, ObjectNotKnown, AttributeNotDefined, AttributeNotOwned {
-        updateObject(packet.getName(), packet.getFields());
-    }
-
-    public void updateObject(String objectName, Map<String, String> attributes)
+    private void updateObject(String objectName, Map<String, String> attributes)
             throws NameNotFound, FederateNotExecutionMember, ObjectNotKnown, AttributeNotDefined, AttributeNotOwned {
         try {
             int classHandle = rtiAmb.getObjectClassHandle(objectName);
@@ -546,7 +604,7 @@ public class InjectionFederate implements Runnable {
     }
     
     // do we need to add \0 ?
-    public SuppliedAttributes assembleAttributes(int classHandle, Map<String, String> attributes)
+    private SuppliedAttributes assembleAttributes(int classHandle, Map<String, String> attributes)
             throws RTIinternalError, ObjectClassNotDefined, NameNotFound, FederateNotExecutionMember {
         SuppliedAttributes suppliedAttributes = RtiFactoryFactory.getRtiFactory().createSuppliedAttributes();
         for (Map.Entry<String, String> entry : attributes.entrySet()) {
@@ -557,7 +615,7 @@ public class InjectionFederate implements Runnable {
         return suppliedAttributes;
     }
     
-    public void advanceLogicalTime() {
+    private void advanceLogicalTime() {
         Double newLogicalTime = fedAmb.getLogicalTime() + configuration.getStepSize();
         log.info("advancing logical time to " + newLogicalTime);
         try {
@@ -579,71 +637,5 @@ public class InjectionFederate implements Runnable {
         } catch (RTIexception e) {
             throw new RTIAmbassadorException(e);
         }
-    }
-    
-    private void tick() {
-        try {
-            rtiAmb.tick();
-            handleSubscriptions();
-        } catch (RTIinternalError | ConcurrentAccessAttempted e) {
-            throw new RTIAmbassadorException(e);
-        }
-    }
-    
-    public int createObjectInstance(String className)
-            throws NameNotFound, ObjectClassNotPublished {
-        int classHandle;
-        int instanceHandle;
-        String instanceName;
-        
-        try {
-            classHandle = rtiAmb.getObjectClassHandle(className);
-        } catch (FederateNotExecutionMember | RTIinternalError e) {
-            throw new RTIAmbassadorException(e);
-        }
-        
-        try {
-            instanceHandle = rtiAmb.registerObjectInstance(classHandle);
-        } catch (ObjectClassNotDefined | FederateNotExecutionMember | SaveInProgress | RestoreInProgress
-                | RTIinternalError | ConcurrentAccessAttempted e) {
-            throw new RTIAmbassadorException(e);
-        }
-        
-        try {
-            instanceName = rtiAmb.getObjectInstanceName(instanceHandle);
-        } catch (ObjectNotKnown | FederateNotExecutionMember | RTIinternalError e) {
-            throw new RTIAmbassadorException(e);
-        }
-        
-        registeredObjectsByName.put(instanceName, instanceHandle);
-        registeredObjectsByHandle.put(instanceHandle, instanceName);
-        return instanceHandle;
-    }
-    
-    public int createObjectInstance(String className, String instanceName)
-            throws NameNotFound, ObjectClassNotPublished, ObjectAlreadyRegistered {
-        int classHandle;
-        int instanceHandle;
-        
-        try {
-            classHandle = rtiAmb.getObjectClassHandle(className);
-        } catch (FederateNotExecutionMember | RTIinternalError e) {
-            throw new RTIAmbassadorException(e);
-        }
-        
-        try {
-            instanceHandle = rtiAmb.registerObjectInstance(classHandle, instanceName);
-        } catch (ObjectClassNotDefined | FederateNotExecutionMember | SaveInProgress | RestoreInProgress
-                | RTIinternalError | ConcurrentAccessAttempted e) {
-            throw new RTIAmbassadorException(e);
-        }
-        
-        registeredObjectsByName.put(instanceName, instanceHandle);
-        registeredObjectsByHandle.put(instanceHandle, instanceName);
-        return instanceHandle;
-    }
-    
-    public ObjectModel getObjectModel() {
-        return objectModel;
     }
 }
