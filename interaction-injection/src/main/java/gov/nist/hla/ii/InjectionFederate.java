@@ -102,7 +102,7 @@ public class InjectionFederate implements Runnable {
             throw new RTIAmbassadorException(e);
         }
         fedAmb = new FederateAmbassador();
-        objectModel = new ObjectModel(configuration.getFomFile());
+        objectModel = new ObjectModel(configuration.getFomFilepath());
     }
     
     public void run() {
@@ -166,7 +166,7 @@ public class InjectionFederate implements Runnable {
             }
             
             final String federateName = configuration.getFederateName();
-            final String federationName = configuration.getFederation();
+            final String federationName = configuration.getFederationId();
             log.info("joining federation " + federationName + " as " + federateName + " (" + i + ")");
             try {
                 rtiAmb.joinFederationExecution(federateName, federationName, fedAmb, null);
@@ -214,7 +214,7 @@ public class InjectionFederate implements Runnable {
         try {
             log.info("enabling time regulation");
             rtiAmb.enableTimeRegulation(new DoubleTime(fedAmb.getLogicalTime()),
-                    new DoubleTimeInterval(configuration.getLookahead()));
+                    new DoubleTimeInterval(configuration.getLookAhead()));
             while (fedAmb.isTimeRegulating() == false) {
                 tick();
             }
@@ -375,7 +375,7 @@ public class InjectionFederate implements Runnable {
             throws NameNotFound, FederateNotExecutionMember, InteractionClassNotPublished, InteractionParameterNotDefined {
         try {
             int interactionHandle = rtiAmb.getInteractionClassHandle(interactionName);
-            LogicalTime timestamp = new DoubleTime(fedAmb.getLogicalTime() + configuration.getLookahead());
+            LogicalTime timestamp = new DoubleTime(fedAmb.getLogicalTime() + configuration.getLookAhead());
             SuppliedParameters suppliedParameters = assembleParameters(interactionHandle, parameters);
             rtiAmb.sendInteraction(interactionHandle, suppliedParameters, null, timestamp);
         } catch (RTIinternalError | ConcurrentAccessAttempted | InvalidFederationTime e) {
@@ -426,7 +426,7 @@ public class InjectionFederate implements Runnable {
         try {
             Interaction receivedInteraction;
             while ((receivedInteraction = fedAmb.nextInteraction()) != null) {
-                int interactionHandle = receivedInteraction.getInteractionClassHandle();
+                int interactionHandle = receivedInteraction.getClassHandle();
                 String interactionName = rtiAmb.getInteractionClassName(interactionHandle);
                 Map<String, String> parameters = mapParameters(receivedInteraction);
                 injectionCallback.receiveInteraction(fedAmb.getLogicalTime(), interactionName, parameters);
@@ -438,9 +438,9 @@ public class InjectionFederate implements Runnable {
     
             ObjectReflection receivedObjectReflection;
             while ((receivedObjectReflection = fedAmb.nextObjectReflection()) != null) {
-                int objectClassHandle = receivedObjectReflection.getObjectClass();
+                int objectClassHandle = receivedObjectReflection.getClassHandle();
                 String objectClassName = rtiAmb.getObjectClassName(objectClassHandle);
-                String objectName = receivedObjectReflection.getObjectName();
+                String objectName = receivedObjectReflection.getInstanceName();
                 Map<String, String> parameters = mapAttributes(objectClassHandle, receivedObjectReflection);
                 injectionCallback.receiveObject(fedAmb.getLogicalTime(), objectClassName, objectName, parameters);
             }
@@ -455,7 +455,7 @@ public class InjectionFederate implements Runnable {
     }
     
     Map<String, String> mapParameters(Interaction receivedInteraction) {
-        int interactionHandle = receivedInteraction.getInteractionClassHandle();
+        int interactionHandle = receivedInteraction.getClassHandle();
         Map<String, String> parameters = new HashMap<String, String>();
         try {
             for (int i = 0; i < receivedInteraction.getParameterCount(); i++) {
@@ -526,7 +526,7 @@ public class InjectionFederate implements Runnable {
         try {
             int classHandle = rtiAmb.getObjectClassHandle(objectName);
             int objectHandle = rtiAmb.getObjectInstanceHandle(objectName);
-            LogicalTime timestamp = new DoubleTime(fedAmb.getLogicalTime() + configuration.getLookahead());
+            LogicalTime timestamp = new DoubleTime(fedAmb.getLogicalTime() + configuration.getLookAhead());
             SuppliedAttributes suppliedAttributes = assembleAttributes(classHandle, attributes);
             rtiAmb.updateAttributeValues(objectHandle, suppliedAttributes, null, timestamp);
         } catch (RTIinternalError | ConcurrentAccessAttempted | InvalidFederationTime e) {
@@ -553,7 +553,7 @@ public class InjectionFederate implements Runnable {
     }
     
     public void advanceLogicalTime() {
-        Double newLogicalTime = fedAmb.getLogicalTime() + configuration.getStepsize();
+        Double newLogicalTime = fedAmb.getLogicalTime() + configuration.getStepSize();
         log.info("advancing logical time to " + newLogicalTime);
         try {
             fedAmb.setTimeAdvancing();
@@ -568,7 +568,7 @@ public class InjectionFederate implements Runnable {
     }
     
     private void resignFederationExecution() {
-        log.info("resigning from the federation execution " + configuration.getFederation());
+        log.info("resigning from the federation execution " + configuration.getFederationId());
         try {
             rtiAmb.resignFederationExecution(ResignAction.NO_ACTION);
         } catch (RTIexception e) {

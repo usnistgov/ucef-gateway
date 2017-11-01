@@ -1,6 +1,7 @@
 package gov.nist.hla.ii;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import hla.rti.ArrayIndexOutOfBounds;
 import hla.rti.ReflectedAttributes;
@@ -24,13 +25,13 @@ public class ObjectReflection {
         }
     }
 
-    private int objectClass;
-    private String objectName;
-    private ArrayList<Attribute> attributes;
+    private int classHandle;
+    private String instanceName;
+    private List<Attribute> attributes;
 
     public ObjectReflection(int objectClass, String objectName, ReflectedAttributes theAttributes) {
-        this.objectClass = objectClass;
-        this.objectName = objectName;
+        this.classHandle = objectClass;
+        this.instanceName = objectName;
         this.attributes = new ArrayList<Attribute>(theAttributes.size());
 
         for (int i = 0; i < theAttributes.size(); i++) {
@@ -44,12 +45,12 @@ public class ObjectReflection {
         }
     }
 
-    public int getObjectClass() {
-        return objectClass;
+    public int getClassHandle() {
+        return classHandle;
     }
 
-    public String getObjectName() {
-        return objectName;
+    public String getInstanceName() {
+        return instanceName;
     }
 
     public int getAttributeCount() {
@@ -74,6 +75,6 @@ public class ObjectReflection {
     }
     
     public String toString() {
-        return String.format("object name=%s class=%d attributes=%d", objectName, objectClass, attributes.size());
+        return String.format("object name=%s class=%d attributes=%d", instanceName, classHandle, attributes.size());
     }
 }

@@ -1,6 +1,7 @@
 package gov.nist.hla.ii;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import hla.rti.ArrayIndexOutOfBounds;
 import hla.rti.ReceivedInteraction;
@@ -24,11 +25,11 @@ public class Interaction {
         }
     }
 
-    private int interactionClass;
-    private ArrayList<Parameter> parameters;
+    private int classHandle;
+    private List<Parameter> parameters;
 
     public Interaction(int interactionClass, ReceivedInteraction theInteraction) {
-        this.interactionClass = interactionClass;
+        this.classHandle = interactionClass;
         this.parameters = new ArrayList<Parameter>(theInteraction.size());
 
         for (int i = 0; i < theInteraction.size(); i++) {
@@ -42,8 +43,8 @@ public class Interaction {
         }
     }
 
-    public int getInteractionClassHandle() {
-        return interactionClass;
+    public int getClassHandle() {
+        return classHandle;
     }
 
     public int getParameterCount() {
@@ -68,6 +69,6 @@ public class Interaction {
     }
     
     public String toString() {
-        return String.format("interaction class=%d parameters=%d", interactionClass, parameters.size());
+        return String.format("interaction class=%d parameters=%d", classHandle, parameters.size());
     }
 }

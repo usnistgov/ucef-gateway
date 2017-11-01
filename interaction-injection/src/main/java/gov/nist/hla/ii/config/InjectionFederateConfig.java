@@ -1,66 +1,49 @@
 package gov.nist.hla.ii.config;
 
 public class InjectionFederateConfig {
-
     private String federateName;
-    private String federation;
-    private String fomFile;
-    private double lookahead;
-    private double stepsize;
+    private String federationId;
+    private String fomFilepath;
     private int maxReconnectAttempts;
     private long waitReconnectMs;
     private boolean isLateJoiner;
-
+    private double lookAhead;
+    private double stepSize;
+    
+    public void setFederateName(String federateName) {
+        this.federateName = federateName;
+    }
+    
     public String getFederateName() {
         return federateName;
     }
 
-    public void setFederateName(String federateName) {
-        this.federateName = federateName;
-    }
-
-    public String getFederation() {
-        return federation;
-    }
-
-    public void setFederation(String federation) {
-        this.federation = federation;
-    }
-
-    public String getFomFile() {
-        return fomFile;
-    }
-
-    public void setFomFile(String fomFile) {
-        this.fomFile = fomFile;
-    }
-
-    public double getLookahead() {
-        return lookahead;
-    }
-
-    public void setLookahead(double lookahead) {
-        this.lookahead = lookahead;
-    }
-
-    public double getStepsize() {
-        return stepsize;
-    }
-
-    public void setStepsize(double stepsize) {
-        this.stepsize = stepsize;
+    public void setFederationId(String federationId) {
+        this.federationId = federationId;
     }
     
-    public void setMaxReconnectAttempts(int max) {
-        this.maxReconnectAttempts = max;
+    public String getFederationId() {
+        return federationId;
+    }
+
+    public void setFomFilepath(String fomFilepath) {
+        this.fomFilepath = fomFilepath;
+    }
+
+    public String getFomFilepath() {
+        return fomFilepath;
+    }
+    
+    public void setMaxReconnectAttempts(int maxReconnectAttempts) {
+        this.maxReconnectAttempts = maxReconnectAttempts;
     }
     
     public int getMaxReconnectAttempts() {
         return maxReconnectAttempts;
     }
     
-    public void setWaitReconnectMs(long ms) {
-        this.waitReconnectMs = ms;
+    public void setWaitReconnectMs(long waitReconnectMs) {
+        this.waitReconnectMs = waitReconnectMs;
     }
     
     public long getWaitReconnectMs() {
@@ -73,5 +56,21 @@ public class InjectionFederateConfig {
     
     public boolean getIsLateJoiner() {
         return isLateJoiner;
+    }
+    
+    public void setLookAhead(double lookAhead) {
+        this.lookAhead = lookAhead;
+    }
+    
+    public double getLookAhead() {
+        return lookAhead;
+    }
+
+    public void setStepSize(double stepSize) {
+        this.stepSize = stepSize;
+    }
+
+    public double getStepSize() {
+        return stepSize;
     }
 }
