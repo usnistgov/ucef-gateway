@@ -1,4 +1,4 @@
-package gov.nist.hla.ii;
+package gov.nist.hla;
 
 import java.util.ArrayList;
 import java.util.List;

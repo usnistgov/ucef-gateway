@@ -21,6 +21,9 @@ import org.portico.impl.hla13.types.DoubleTimeInterval;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import gov.nist.hla.FederateAmbassador;
+import gov.nist.hla.Interaction;
+import gov.nist.hla.ObjectReflection;
 import gov.nist.hla.ii.config.InjectionFederateConfig;
 import gov.nist.hla.ii.exception.RTIAmbassadorException;
 import gov.nist.hla.ii.exception.UnsupportedServiceException;

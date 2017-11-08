@@ -1,4 +1,4 @@
-package gov.nist.hla.ii;
+package gov.nist.hla;
 
 import java.util.HashMap;
 import java.util.HashSet;
