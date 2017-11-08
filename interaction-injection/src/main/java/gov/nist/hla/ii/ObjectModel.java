@@ -1,5 +1,6 @@
 package gov.nist.hla.ii;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -163,23 +164,29 @@ public class ObjectModel {
     }
     
     private void initializeInteractionVariables() {
-        Queue<InteractionClassType> unprocessedInteractions = new LinkedList<InteractionClassType>();
-        InteractionClassType interactionRoot = objectModel.getInteractions().getInteractionClass();
+        log.trace("parsing interaction classes");
         
-        unprocessedInteractions.add(interactionRoot);
+        Queue<InteractionClassType> unprocessedInteractions = new LinkedList<InteractionClassType>();
+        unprocessedInteractions.add(objectModel.getInteractions().getInteractionClass());
+        
         while (!unprocessedInteractions.isEmpty()) {
             InteractionClassType nextInteraction = unprocessedInteractions.poll();
-            
             String classPath = nextInteraction.getName().getValue();
-            EObject parent = nextInteraction.eContainer();
+            log.trace("on " + classPath);
+            
             Set<ParameterType> parameters = new HashSet<ParameterType>();
             parameters.addAll(nextInteraction.getParameter());
-            while (parent != null && parent instanceof InteractionClassType) {
+            
+            EObject parent = nextInteraction.eContainer();
+            if (parent != null && parent instanceof InteractionClassType) {
                 InteractionClassType parentInteraction = (InteractionClassType) parent;
-                classPath = parentInteraction.getName().getValue() + "." + classPath;
-                parameters.addAll(parentInteraction.getParameter());
-                parent = parent.eContainer();
+                log.trace("using parent " + parentInteraction.getName().getValue());
+                classPath = getClassPath(parentInteraction) + "." + classPath;
+                parameters.addAll(getParameters(parentInteraction));
             }
+            
+            log.debug("new interaction " + classPath + " " + Arrays.toString(parameters.toArray()));
+            
             interactionToClassPath.put(nextInteraction, classPath);
             classPathToInteraction.put(classPath, nextInteraction);
             interactionToParameters.put(nextInteraction, parameters);
@@ -197,23 +204,29 @@ public class ObjectModel {
     
     // follow hla convention that sharing tag for object is based on its attributes
     private void initializeObjectVariables() {
-        Queue<ObjectClassType> unprocessedObjects = new LinkedList<ObjectClassType>();
-        ObjectClassType objectRoot = objectModel.getObjects().getObjectClass();
+        log.trace("parsing object classes");
         
-        unprocessedObjects.add(objectRoot);
+        Queue<ObjectClassType> unprocessedObjects = new LinkedList<ObjectClassType>();
+        unprocessedObjects.add(objectModel.getObjects().getObjectClass());
+        
         while (!unprocessedObjects.isEmpty()) {
             ObjectClassType nextObject = unprocessedObjects.poll();
-            
             String classPath = nextObject.getName().getValue();
-            EObject parent = nextObject.eContainer();
+            log.trace("on " + classPath);
+            
             Set<AttributeType> attributes = new HashSet<AttributeType>();
             attributes.addAll(nextObject.getAttribute());
-            while (parent != null && parent instanceof ObjectClassType) {
+            
+            EObject parent = nextObject.eContainer();
+            if (parent != null && parent instanceof ObjectClassType) {
                 ObjectClassType parentObject = (ObjectClassType) parent;
-                classPath = parentObject.getName().getValue() + "." + classPath;
-                attributes.addAll(parentObject.getAttribute());
-                parent = parent.eContainer();
+                log.trace("using parent " + parentObject.getName().getValue());
+                classPath = getClassPath(parentObject) + "." + classPath;
+                attributes.addAll(getAttributes(parentObject));
             }
+            
+            log.debug("new object " + classPath + " " + Arrays.toString(attributes.toArray()));
+            
             objectToClassPath.put(nextObject, classPath);
             classPathToObject.put(classPath, nextObject);
             objectToAttributes.put(nextObject, attributes);
