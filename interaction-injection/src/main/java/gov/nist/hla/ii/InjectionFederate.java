@@ -63,13 +63,12 @@ import hla.rti.TimeConstrainedAlreadyEnabled;
 import hla.rti.TimeRegulationAlreadyEnabled;
 import hla.rti.jlc.RtiFactoryFactory;
 
-// no thread safe
 // no schema validation
 // feature limitations:
 //  dynamic publish/subscribe
 //  discover object instances
 //  synchronize
-public class InjectionFederate implements Runnable {
+public class InjectionFederate {
     private static final Logger log = LogManager.getLogger();
 
     private static final String SIMULATION_END = "InteractionRoot.C2WInteractionRoot.SimulationControl.SimEnd";
