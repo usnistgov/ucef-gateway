@@ -123,7 +123,6 @@ public class InjectionFederate implements Runnable {
             log.trace("run t=" + getLogicalTime());
             injectionCallback.beforeTimeStep(getLogicalTime());
             handleSubscriptions();
-            sendPublications();
             injectionCallback.afterTimeStep(getLogicalTime());
             advanceLogicalTime();
         }
@@ -242,14 +241,66 @@ public class InjectionFederate implements Runnable {
         
         return instanceName;
     }
-    
-    public void sendReceiveOrder(HLAPacket packet)
+        
+    public void injectInteraction(String className, Map<String, String> parameters, Double timestamp)
             throws NameNotFound, FederateNotExecutionMember, InteractionClassNotPublished,
-            InteractionParameterNotDefined, ObjectNotKnown, AttributeNotDefined, AttributeNotOwned {
-        if (packet.isInteraction()) {
-            injectInteraction(packet.getName(), packet.getFields(), null);
-        } else {
-            updateObject(packet.getName(), packet.getFields(), null);
+            InteractionParameterNotDefined {
+        log.trace("injectInteraction " + className + " " + Arrays.toString(parameters.entrySet().toArray())
+                + " " + timestamp);
+        try {
+            int classHandle = rtiAmb.getInteractionClassHandle(className);
+            SuppliedParameters suppliedParameters = RtiFactoryFactory.getRtiFactory().createSuppliedParameters();
+            for (Map.Entry<String, String> entry : parameters.entrySet()) {
+                int parameterHandle = rtiAmb.getParameterHandle(entry.getKey(), classHandle);
+                byte[] parameterValue = entry.getValue().getBytes(); // do we need to add \0 ?
+                suppliedParameters.add(parameterHandle, parameterValue);
+            }
+            if (timestamp == null) {
+                log.debug("sending receive order interaction " + className);
+                rtiAmb.sendInteraction(classHandle, suppliedParameters, null);
+            } else {
+                log.debug("sending interaction " + className + " for t=" + timestamp);
+                rtiAmb.sendInteraction(classHandle, suppliedParameters, null, new DoubleTime(timestamp));
+            }
+        } catch (RTIinternalError | ConcurrentAccessAttempted | InvalidFederationTime e) {
+            throw new RTIAmbassadorException(e);
+        } catch (InteractionClassNotDefined e) {
+            log.fatal("unreachable code block in injectInteraction");
+            throw new RTIAmbassadorException(e);
+        } catch (SaveInProgress | RestoreInProgress e) {
+            log.fatal("save/restore services not supported");
+            throw new RTIAmbassadorException(e);
+        }
+    }
+    
+    public void updateObject(String instanceName, Map<String, String> attributes, Double timestamp)
+            throws ObjectNotKnown, FederateNotExecutionMember, NameNotFound, AttributeNotDefined, AttributeNotOwned {
+        log.trace("updateObject " + instanceName + " " + Arrays.toString(attributes.entrySet().toArray()) 
+                + " " + timestamp);
+        try {
+            int instanceHandle = rtiAmb.getObjectInstanceHandle(instanceName);
+            int classHandle = rtiAmb.getObjectClass(instanceHandle);
+            SuppliedAttributes suppliedAttributes = RtiFactoryFactory.getRtiFactory().createSuppliedAttributes();
+            for (Map.Entry<String, String> entry : attributes.entrySet()) {
+                int attributeHandle = rtiAmb.getAttributeHandle(entry.getKey(), classHandle);
+                byte[] attributeValue = entry.getValue().getBytes(); // do we need to add \0 ?
+                suppliedAttributes.add(attributeHandle, attributeValue);
+            }
+            if (timestamp == null) {
+                log.debug("sending receive order object " + instanceName);
+                rtiAmb.updateAttributeValues(instanceHandle, suppliedAttributes, null);
+            } else {
+                log.debug("sending object " + instanceName + " for t=" + timestamp);
+                rtiAmb.updateAttributeValues(instanceHandle, suppliedAttributes, null, new DoubleTime(timestamp));
+            }
+        } catch (RTIinternalError | ConcurrentAccessAttempted | InvalidFederationTime e) {
+            throw new RTIAmbassadorException(e);
+        } catch (SaveInProgress | RestoreInProgress e) {
+            log.fatal("save/restore services not supported");
+            throw new RTIAmbassadorException(e);
+        } catch (ObjectClassNotDefined e) {
+            log.fatal("unreachable code block in updateObject");
+            throw new RTIAmbassadorException(e);
         }
     }
     
@@ -491,94 +542,6 @@ public class InjectionFederate implements Runnable {
             throw new RTIAmbassadorException(e);
         } catch (FederateNotExecutionMember e) {
             throw new RTIAmbassadorException(e);
-        }
-    }
-    
-    private void injectInteraction(String className, Map<String, String> parameters, Double timestamp)
-            throws NameNotFound, FederateNotExecutionMember, InteractionClassNotPublished,
-            InteractionParameterNotDefined {
-        log.trace("injectInteraction " + className + " " + Arrays.toString(parameters.entrySet().toArray())
-                + " " + timestamp);
-        try {
-            int classHandle = rtiAmb.getInteractionClassHandle(className);
-            SuppliedParameters suppliedParameters = RtiFactoryFactory.getRtiFactory().createSuppliedParameters();
-            for (Map.Entry<String, String> entry : parameters.entrySet()) {
-                int parameterHandle = rtiAmb.getParameterHandle(entry.getKey(), classHandle);
-                byte[] parameterValue = entry.getValue().getBytes(); // do we need to add \0 ?
-                suppliedParameters.add(parameterHandle, parameterValue);
-            }
-            if (timestamp == null) {
-                log.debug("sending receive order interaction " + className);
-                rtiAmb.sendInteraction(classHandle, suppliedParameters, null);
-            } else {
-                log.debug("sending interaction " + className + " for t=" + timestamp);
-                rtiAmb.sendInteraction(classHandle, suppliedParameters, null, new DoubleTime(timestamp));
-            }
-        } catch (RTIinternalError | ConcurrentAccessAttempted | InvalidFederationTime e) {
-            throw new RTIAmbassadorException(e);
-        } catch (InteractionClassNotDefined e) {
-            log.fatal("unreachable code block in injectInteraction");
-            throw new RTIAmbassadorException(e);
-        } catch (SaveInProgress | RestoreInProgress e) {
-            log.fatal("save/restore services not supported");
-            throw new RTIAmbassadorException(e);
-        }
-    }
-    
-    private void updateObject(String instanceName, Map<String, String> attributes, Double timestamp)
-            throws ObjectNotKnown, FederateNotExecutionMember, NameNotFound, AttributeNotDefined, AttributeNotOwned {
-        log.trace("updateObject " + instanceName + " " + Arrays.toString(attributes.entrySet().toArray()) 
-                + " " + timestamp);
-        try {
-            int instanceHandle = rtiAmb.getObjectInstanceHandle(instanceName);
-            int classHandle = rtiAmb.getObjectClass(instanceHandle);
-            SuppliedAttributes suppliedAttributes = RtiFactoryFactory.getRtiFactory().createSuppliedAttributes();
-            for (Map.Entry<String, String> entry : attributes.entrySet()) {
-                int attributeHandle = rtiAmb.getAttributeHandle(entry.getKey(), classHandle);
-                byte[] attributeValue = entry.getValue().getBytes(); // do we need to add \0 ?
-                suppliedAttributes.add(attributeHandle, attributeValue);
-            }
-            if (timestamp == null) {
-                log.debug("sending receive order object " + instanceName);
-                rtiAmb.updateAttributeValues(instanceHandle, suppliedAttributes, null);
-            } else {
-                log.debug("sending object " + instanceName + " for t=" + timestamp);
-                rtiAmb.updateAttributeValues(instanceHandle, suppliedAttributes, null, new DoubleTime(timestamp));
-            }
-        } catch (RTIinternalError | ConcurrentAccessAttempted | InvalidFederationTime e) {
-            throw new RTIAmbassadorException(e);
-        } catch (SaveInProgress | RestoreInProgress e) {
-            log.fatal("save/restore services not supported");
-            throw new RTIAmbassadorException(e);
-        } catch (ObjectClassNotDefined e) {
-            log.fatal("unreachable code block in updateObject");
-            throw new RTIAmbassadorException(e);
-        }
-    }
-    
-    private void sendPublications() {
-        Queue<HLAPacket> publications = injectionCallback.getPublications(fedAmb.getLogicalTime());
-        double timestamp = fedAmb.getLogicalTime() + configuration.getLookAhead();
-        log.debug("sending publications for t=" + timestamp);
-        
-        HLAPacket packet = null;
-        while ((packet = publications.poll()) != null) {
-            log.debug("on publication for " + packet.getName());
-            if (packet.isObject()) {
-                try {
-                    updateObject(packet.getName(), packet.getFields(), timestamp);
-                } catch (NameNotFound | FederateNotExecutionMember | ObjectNotKnown | AttributeNotDefined
-                        | AttributeNotOwned e) {
-                    throw new RTIAmbassadorException(e);
-                }
-            } else {
-                try {
-                    injectInteraction(packet.getName(), packet.getFields(), timestamp);
-                } catch (NameNotFound | FederateNotExecutionMember | InteractionClassNotPublished
-                        | InteractionParameterNotDefined e) {
-                    throw new RTIAmbassadorException(e);
-                }
-            }
         }
     }
     

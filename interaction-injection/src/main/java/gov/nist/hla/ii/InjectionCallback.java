@@ -1,10 +1,8 @@
 package gov.nist.hla.ii;
 
 import java.util.Map;
-import java.util.Queue;
 
 public interface InjectionCallback {
-    Queue<HLAPacket> getPublications(Double logicalTime);
     
     void receiveInteraction(Double timeStep, String className, Map<String, String> parameters);
 
