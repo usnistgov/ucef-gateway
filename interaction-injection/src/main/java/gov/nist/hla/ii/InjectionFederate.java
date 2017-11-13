@@ -66,11 +66,30 @@ import hla.rti.TimeConstrainedAlreadyEnabled;
 import hla.rti.TimeRegulationAlreadyEnabled;
 import hla.rti.jlc.RtiFactoryFactory;
 
-// no schema validation
-// feature limitations:
-//  dynamic publish/subscribe
-//  discover object instances
-//  synchronize
+/**
+ * This class provides a simplified API for working with the Portico implementation of HLA. It contains public methods
+ * to call the HLA object management services to inject interactions and object updates into a federation, and invokes
+ * the methods in the {@link InjectionCallback} used at construction during the federate life cycle.
+ * <p>
+ * The injection federate has a firm life cycle. After construction and calling {@link #run}, it will join the
+ * federation indicated in its configuration file. It will then block waiting for the federation to achieve both
+ * the readyToPopuate and readyToRun synchronization points in the listed order. After synchronization, it will begin
+ * logical time progression, which will loop until the federation sends an interaction that designates the simulation
+ * end or the public method {@link #requestExit} is invoked. If it exits due to simulation end, it will block for a
+ * final synchronization point readyToResign before it exits. Otherwise, it will skip synchronization and perform one
+ * last logical time iteration before resignation.
+ * <p>
+ * This class is not thread safe. All of its public methods will throw runtime exceptions if invoked from another
+ * thread. It is only safe to invoke public methods from the concrete implementation of {@link InjectionCallback} used
+ * to construct the injection federate.
+ * <p>
+ * A significant number of HLA services are not exposed in the public interface. The federation management, ownership
+ * management, time management, and data distribution management services are not exposed through the public API. Both
+ * the save/restore services and ownership transfer services are unimplemented, and this class will throw exceptions
+ * if the federation attempts to invoke either service.
+ * 
+ * @author Thomas Roth
+ */
 public class InjectionFederate {
     private static final Logger log = LogManager.getLogger();
 
@@ -84,9 +103,18 @@ public class InjectionFederate {
     private FederateAmbassador fedAmb;
     private ObjectModel objectModel;
     
+    private boolean isRunning = false;
     private boolean receivedSimEnd = false;
     private boolean exitFlag = false;
     
+    /**
+     * This helper method creates an {@link InjectionFederateConfig} from a JSON configuration file that can then be
+     * used to construct an injection federate instance.
+     * 
+     * @param filepath The absolute or relative filepath to the configuration file
+     * @return An instance of a configuration class that can be used to construct an injection federate
+     * @throws IOException if the filepath cannot be parsed as valid JSON
+     */
     public static InjectionFederateConfig readConfiguration(String filepath)
             throws IOException {
         log.debug("reading JSON configuration file at " + filepath);
@@ -95,6 +123,13 @@ public class InjectionFederate {
         return mapper.readValue(configFile, InjectionFederateConfig.class);
     }
     
+    /**
+     * Constructs an injection federate using the given configuration that will yield control during {@link #run} to
+     * the given {@link InjectionCallback}.
+     * 
+     * @param configuration A configuration instance created using {@link #readConfiguration}
+     * @param injectionCallback A set of callback functions that will be invoked during {@link #run}
+     */
     public InjectionFederate(InjectionFederateConfig configuration, InjectionCallback injectionCallback) {
         this.configuration = configuration;
         this.injectionCallback = injectionCallback;
@@ -107,9 +142,21 @@ public class InjectionFederate {
         objectModel = new ObjectModel(configuration.getFomFilepath());
     }
     
+    /**
+     * A blocking call that will execute the complete life cycle of the injection federate. This method will exit when
+     * either the federation sends an interaction that represents simulation end, or {@link #requestExit} is invoked.
+     * For both exit conditions, one final logical time step will be executed before this method returns control.
+     */
     public void run() {
         log.trace("run");
-
+        
+        if (isRunning) {
+            throw new RuntimeException("injection federate instance already running");
+        }
+        this.exitFlag = false;
+        this.receivedSimEnd = false;
+        this.isRunning = true;
+        
         try {
             joinFederationExecution();
         } catch (InterruptedException e) {
@@ -126,7 +173,7 @@ public class InjectionFederate {
             notifyOfFederationJoin();
             
             injectionCallback.initializeSelf();
-            synchronize(SynchronizationPoints.ReadyToPopulate);
+            synchronize(SynchronizationPoints.ReadyToPopulate); // should not do if late joiner ?
             injectionCallback.initializeWithPeers();
             synchronize(SynchronizationPoints.ReadyToRun);
             
@@ -146,8 +193,16 @@ public class InjectionFederate {
             throw new RTIAmbassadorException("unreachable code", e);
         }
         injectionCallback.afterResignation();
+        this.isRunning = false;
     }
     
+    /**
+     * Yield control to the RTI ambassador to handle any receive order messages in the local message queue. This call
+     * will invoke {@link InjectionCallback#receiveInteraction} and {@link InjectionCallback#receiveObject} when
+     * there are receive order interactions and object reflections in the incoming message queue.
+     * 
+     * @throws FederateNotExecutionMember if invoked before {@link #run} or if connection to the federation is lost
+     */
     public void tick()
             throws FederateNotExecutionMember {
         log.trace("tick");
@@ -159,19 +214,50 @@ public class InjectionFederate {
         handleSubscriptions();
     }
     
+    /**
+     * Object model accessor
+     * 
+     * @return The object model that corresponds to this injection federate's current publications and subscriptions
+     */
     public ObjectModel getObjectModel() {
         return objectModel;
     }
     
+    /**
+     * Logical time accessor
+     * 
+     * @return This injection federate's current logical time step
+     */
     public double getLogicalTime() {
         return fedAmb.getLogicalTime();
     }
     
+    /**
+     * Get the lowest value timestamp that can be used to send interactions and object updates.
+     * 
+     * @return A timestamp to use as a parameter for {@link #injectInteraction} and {@link #updateObject}
+     */
+    public double getTimeStamp() {
+        return fedAmb.getLogicalTime() + configuration.getLookAhead();
+    }
+    
+    /**
+     * Request this class resign from its federation and return from {@link #run} after the next logical time step.
+     */
     public void requestExit() {
         log.info("application requested exit");
         this.exitFlag = true;
     }
     
+    /**
+     * Create a new object instance in the current federation and assign it a random name.
+     * 
+     * @param className The full HLA object class to create a new instance for
+     * @return The instance name for the newly created object
+     * @throws FederateNotExecutionMember if invoked before {@link #run} or if connection to the federation is lost
+     * @throws NameNotFound if className is not the full classpath of a known HLA object class
+     * @throws ObjectClassNotPublished if className is not an object class this federate publishes
+     */
     public String registerObjectInstance(String className)
             throws FederateNotExecutionMember, NameNotFound, ObjectClassNotPublished {
         log.trace("registerObjectInstance " + className);
@@ -189,6 +275,17 @@ public class InjectionFederate {
         }
     }
     
+    /**
+     * Create a new object instance in the current federation and assign it the given name.
+     * 
+     * @param className The full HLA object class to create a new instance for
+     * @param instanceName The unique name to assign to the newly created instance
+     * @return The instanceName parameter used to name the new object
+     * @throws FederateNotExecutionMember if invoked before {@link #run} or if connection to the federation is lost
+     * @throws NameNotFound if className is not the full classpath of a known HLA object class
+     * @throws ObjectClassNotPublished if className is not an object class this federate publishes
+     * @throws ObjectAlreadyRegistered if another object instance already exists named instanceName
+     */
     public String registerObjectInstance(String className, String instanceName)
             throws FederateNotExecutionMember, NameNotFound, ObjectClassNotPublished, ObjectAlreadyRegistered {
         log.trace("registerObjectInstance " + className + " " + instanceName);
@@ -206,6 +303,14 @@ public class InjectionFederate {
         } 
     }
     
+    /**
+     * Delete an object instance created from a prior call to {@link #registerObjectInstance}
+     * 
+     * @param instanceName The unique name of the object instance to delete from the federation
+     * @throws FederateNotExecutionMember if invoked before {@link #run} or if connection to the federation is lost
+     * @throws ObjectNotKnown if instanceName does not refer to an existing HLA object in the federation
+     * @throws DeletePrivilegeNotHeld if this federate was not the one who created the object named instanceName
+     */
     public void deleteObjectInstance(String instanceName)
             throws FederateNotExecutionMember, ObjectNotKnown, DeletePrivilegeNotHeld {
         try {
@@ -229,6 +334,22 @@ public class InjectionFederate {
         return suppliedParameters;
     }
     
+    /**
+     * Create and send a receive order interaction to the federation. Other federates can receive this interaction
+     * during the same logical time step it is sent using an explicit call to {@link #tick}. Because the message will
+     * take some time to deliver, {@link #tick} should be called multiple times in a loop until the desired receive
+     * order message has been delivered to {@link InjectionCallback#receiveInteraction}.
+     * <p>
+     * The behavior of this function is undefined when using a subset of the interaction's available parameters. The
+     * parameters map should always contain values for every interaction parameter.
+     * 
+     * @param className The full HLA interaction class name to send
+     * @param parameters A map from parameter names to string values
+     * @throws FederateNotExecutionMember if invoked before {@link #run} or if connection to the federation is lost
+     * @throws NameNotFound if className is not a known HLA interaction class, or a key from parameters is not a valid
+     *  parameter name for the className interaction
+     * @throws InteractionClassNotPublished if this federate does not publish the interaction className
+     */
     public void injectInteraction(String className, Map<String, String> parameters)
             throws FederateNotExecutionMember, NameNotFound, InteractionClassNotPublished {
         try {
@@ -246,6 +367,23 @@ public class InjectionFederate {
         } 
     }
     
+    /**
+     * Create and send an interaction to the federation which other federates will receive once their logical time
+     * exceeds the given timestamp. The value of timestamp must be greater than or equal to the value returned by
+     * {@link #getTimeStamp}.
+     * <p>
+     * The behavior of this function is undefined when using a subset of the interaction's available parameters. The
+     * parameters map should always contain values for every interaction parameter.
+     * 
+     * @param className The full HLA interaction class name to send
+     * @param parameters A map from parameter names to string values
+     * @param timestamp The logical time after which other federates should receive this interaction
+     * @throws FederateNotExecutionMember if invoked before {@link #run} or if connection to the federation is lost
+     * @throws NameNotFound if className is not a known HLA interaction class, or a key from parameters is not a valid
+     *  parameter name for the className interaction
+     * @throws InteractionClassNotPublished if this federate does not publish the interaction className
+     * @throws InvalidFederationTime if this federate cannot send interactions to be delivered at the given timestamp
+     */
     public void injectInteraction(String className, Map<String, String> parameters, double timestamp)
             throws FederateNotExecutionMember, NameNotFound, InteractionClassNotPublished, InvalidFederationTime {
         log.trace("injectInteraction " + className + " " + Arrays.toString(parameters.entrySet().toArray())
@@ -276,6 +414,19 @@ public class InjectionFederate {
         return suppliedAttributes;
     }
     
+    /**
+     * Send a receive order update to an existing and owned object instance. Other federates can receive this update
+     * during the same logical time step it is sent using an explicit call to {@link #tick}. Because the message will
+     * take some time to deliver, {@link #tick} should be called multiple times in a loop until the desired receive
+     * order message has been delivered to {@link InjectionCallback#receiveObject}.
+     * 
+     * @param instanceName The object instance name returned from {@link #registerObjectInstance}
+     * @param attributes A map from attribute names to string values
+     * @throws FederateNotExecutionMember if invoked before {@link #run} or if connection to the federation is lost
+     * @throws ObjectNotKnown if instanceName does not refer to an existing HLA object in the federation
+     * @throws NameNotFound if a key from the attributes map is not a valid attribute name for the object instance
+     * @throws AttributeNotOwned if this federate was not the one who created the object named instanceName
+     */
     public void updateObject(String instanceName, Map<String, String> attributes)
             throws FederateNotExecutionMember, ObjectNotKnown, NameNotFound, AttributeNotOwned {
         try {
@@ -294,6 +445,20 @@ public class InjectionFederate {
         } 
     }
     
+    /**
+     * Send an update to an existing and owned object instance which other federates will receive once their logical
+     * time exceeds the given timestamp. The value of timestamp must be greater than or equal to the value returned by
+     * {@link #getTimeStamp}.
+     * 
+     * @param instanceName The object instance name returned from {@link #registerObjectInstance}
+     * @param attributes A map from attribute names to string values
+     * @param timestamp The logical time after which other federates should receive this object update
+     * @throws FederateNotExecutionMember if invoked before {@link #run} or if connection to the federation is lost
+     * @throws ObjectNotKnown if instanceName does not refer to an existing HLA object in the federation
+     * @throws NameNotFound if a key from the attributes map is not a valid attribute name for the object instance
+     * @throws AttributeNotOwned if this federate was not the one who created the object named instanceName
+     * @throws InvalidFederationTime if this federate cannot send object updates to be delivered at the given timestamp
+     */
     public void updateObject(String instanceName, Map<String, String> attributes, double timestamp)
             throws FederateNotExecutionMember, ObjectNotKnown, NameNotFound, AttributeNotOwned, InvalidFederationTime {
         log.trace("updateObject " + instanceName + " " + Arrays.toString(attributes.entrySet().toArray()) 
