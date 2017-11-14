@@ -64,6 +64,19 @@
                     <target>1.8</target>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.0.0-M1</version>
+                <configuration>
+                    <sourceFileIncludes>
+                        <include>gov/nist/hla/ii/InjectionFederate.java</include>
+                        <include>gov/nist/hla/ii/InjectionCallback.java</include>
+                        <include>gov/nist/hla/ii/ObjectModel.java</include>
+                    </sourceFileIncludes>
+                    <sourcepath>src/main/java</sourcepath>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>
