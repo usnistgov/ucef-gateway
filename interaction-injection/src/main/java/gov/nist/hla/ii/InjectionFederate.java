@@ -95,7 +95,7 @@ public class InjectionFederate {
 
     private static final String SIMULATION_END = "InteractionRoot.C2WInteractionRoot.SimulationControl.SimEnd";
     private static final String FEDERATE_JOIN = "InteractionRoot.C2WInteractionRoot.FederateJoinInteraction";
-    
+
     private InjectionFederateConfig configuration;
     private InjectionCallback injectionCallback;
     
@@ -159,6 +159,9 @@ public class InjectionFederate {
         
         try {
             joinFederationExecution();
+        } catch (FederationExecutionDoesNotExist e) {
+            log.fatal("unable to join federation: " + e.getMessage());
+            return;
         } catch (InterruptedException e) {
             log.fatal("run halted due to interrupt");
             return;
@@ -205,7 +208,6 @@ public class InjectionFederate {
      */
     public void tick()
             throws FederateNotExecutionMember {
-        log.trace("tick");
         try {
             rtiAmb.tick();
         } catch (RTIinternalError | ConcurrentAccessAttempted e) {
@@ -509,7 +511,7 @@ public class InjectionFederate {
     }
     
     private void joinFederationExecution()
-            throws InterruptedException {
+            throws InterruptedException, FederationExecutionDoesNotExist {
         final String federateName = configuration.getFederateName();
         final String federationName = configuration.getFederationId();
         boolean joinSuccessful = false;
@@ -525,6 +527,9 @@ public class InjectionFederate {
                 rtiAmb.joinFederationExecution(federateName, federationName, fedAmb, null);
                 joinSuccessful = true;
             } catch (FederationExecutionDoesNotExist e) {
+                if (i == configuration.getMaxReconnectAttempts() - 1) {
+                    throw e;
+                }
                 log.warn("federation execution does not exist: " + federationName);
             } catch (SaveInProgress | RestoreInProgress e) {
                 throw new UnsupportedServiceException("for federation save/restore", e);
@@ -674,7 +679,8 @@ public class InjectionFederate {
         
     private void publishObject(String classPath, String... attributes)
             throws NameNotFound, FederateNotExecutionMember {
-        log.trace("publishObject " + classPath + " " + Arrays.toString(attributes));
+        log.info("creating publication for " + classPath + " with " + attributes.length + " attributes");
+        log.debug("\tattributes : " + Arrays.toString(attributes));
         try {
             int classHandle = rtiAmb.getObjectClassHandle(classPath);
             AttributeHandleSet attributeHandleSet = convertToAttributeHandleSet(classHandle, attributes);
@@ -694,7 +700,8 @@ public class InjectionFederate {
     
     private void subscribeObject(String classPath, String... attributes)
             throws NameNotFound, FederateNotExecutionMember {
-        log.trace("subscribeObject " + classPath + " " + Arrays.toString(attributes));
+        log.info("creating subscription for " + classPath + " with " + attributes.length + " attributes");
+        log.debug("\tattributes : " + Arrays.toString(attributes));
         try {
             int classHandle = rtiAmb.getObjectClassHandle(classPath);
             AttributeHandleSet attributeHandleSet = convertToAttributeHandleSet(classHandle, attributes);
@@ -713,7 +720,15 @@ public class InjectionFederate {
     private void notifyOfFederationJoin()
             throws FederateNotExecutionMember {
         log.trace("notifyOfFederationJoin");
-        if (!objectModel.getPublishedInteractions().contains(FEDERATE_JOIN)) {
+        boolean isPublished = false;
+        for (InteractionClassType interaction : objectModel.getPublishedInteractions()) {
+            log.trace("checking " + objectModel.getClassPath(interaction));
+            if (objectModel.getClassPath(interaction).equals(FEDERATE_JOIN)) {
+                isPublished = true;
+                break;
+            }
+        }
+        if (!isPublished) {
             log.warn("not configured to publish " + FEDERATE_JOIN);
             return;
         }

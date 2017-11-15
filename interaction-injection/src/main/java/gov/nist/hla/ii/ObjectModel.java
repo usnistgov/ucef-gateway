@@ -73,6 +73,7 @@ public class ObjectModel {
      * @param filepath Path to the Federation Object Model (FOM) that should be parsed to generate the object model
      */
     public ObjectModel(String filepath) {
+        log.info("creating object model from " + filepath);
         this.objectModel = ObjectModel.readObjectModel(filepath);
         initializeInteractionVariables();
         initializeObjectVariables();
@@ -285,18 +286,33 @@ public class ObjectModel {
             String classPath = nextInteraction.getName().getValue();
             log.trace("on " + classPath);
             
+            Set<String> knownParameters = new HashSet<String>();
             Set<ParameterType> parameters = new HashSet<ParameterType>();
-            parameters.addAll(nextInteraction.getParameter());
+            for (ParameterType parameter : nextInteraction.getParameter()) {
+                String parameterName = parameter.getName().getValue();
+                if (!knownParameters.add(parameterName)) {
+                    log.warn("duplicate parameter " + parameterName);
+                }
+                parameters.add(parameter);
+                log.trace("\twith parameter " + parameterName);
+            }
             
             EObject parent = nextInteraction.eContainer();
             if (parent != null && parent instanceof InteractionClassType) {
                 InteractionClassType parentInteraction = (InteractionClassType) parent;
-                log.trace("using parent " + parentInteraction.getName().getValue());
                 classPath = getClassPath(parentInteraction) + "." + classPath;
-                parameters.addAll(getParameters(parentInteraction));
+                log.trace("\tusing parent " + parentInteraction.getName().getValue());
+                
+                for (ParameterType parameter : getParameters(parentInteraction)) {
+                    String parameterName = parameter.getName().getValue();
+                    if (knownParameters.add(parameterName)) {
+                        parameters.add(parameter);
+                        log.trace("\twith inherited parameter " + parameterName);
+                    }
+                }
             }
             
-            log.debug("new interaction " + classPath + " " + Arrays.toString(parameters.toArray()));
+            log.debug("finished " + classPath + " with " + parameters.size() + " parameters");
             
             interactionToClassPath.put(nextInteraction, classPath);
             classPathToInteraction.put(classPath, nextInteraction);
@@ -311,6 +327,8 @@ public class ObjectModel {
             
             unprocessedInteractions.addAll(nextInteraction.getInteractionClass());
         }
+        
+        log.info("interaction classes initialized");
     }
     
     // follow hla convention that sharing tag for object is based on its attributes
@@ -325,18 +343,33 @@ public class ObjectModel {
             String classPath = nextObject.getName().getValue();
             log.trace("on " + classPath);
             
+            Set<String> knownAttributes = new HashSet<String>();
             Set<AttributeType> attributes = new HashSet<AttributeType>();
-            attributes.addAll(nextObject.getAttribute());
+            for (AttributeType attribute : nextObject.getAttribute()) {
+                String attributeName = attribute.getName().getValue();
+                if (!knownAttributes.add(attributeName)) {
+                    log.warn("duplicate attribute " + attributeName);
+                }
+                attributes.add(attribute);
+                log.trace("\twith attribute " + attributeName);
+            }
             
             EObject parent = nextObject.eContainer();
             if (parent != null && parent instanceof ObjectClassType) {
                 ObjectClassType parentObject = (ObjectClassType) parent;
-                log.trace("using parent " + parentObject.getName().getValue());
                 classPath = getClassPath(parentObject) + "." + classPath;
-                attributes.addAll(getAttributes(parentObject));
+                log.trace("\tusing parent " + parentObject.getName().getValue());
+                
+                for (AttributeType attribute : getAttributes(parentObject)) {
+                    String attributeName = attribute.getName().getValue();
+                    if (knownAttributes.add(attributeName)) {
+                        attributes.add(attribute);
+                        log.trace("\twith inherited attribute " + attributeName);
+                    }
+                }
             }
             
-            log.debug("new object " + classPath + " " + Arrays.toString(attributes.toArray()));
+            log.debug("finished " + classPath + " with " + attributes.size() + " attributes");
             
             objectToClassPath.put(nextObject, classPath);
             classPathToObject.put(classPath, nextObject);
@@ -351,5 +384,7 @@ public class ObjectModel {
             
             unprocessedObjects.addAll(nextObject.getObjectClass());
         }
+        
+        log.info("object classes initialized");
     }
 }

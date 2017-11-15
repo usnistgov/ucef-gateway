@@ -79,6 +79,7 @@ public class FederateAmbassador extends NullFederateAmbassador {
 
     private double logicalTime = 0D;
 
+    @Override
     public void announceSynchronizationPoint(String synchronizationPointLabel, byte[] userSuppliedTag)
             throws FederateInternalError {
         if (pendingSynchronizationPoints.contains(synchronizationPointLabel)) {
@@ -89,11 +90,13 @@ public class FederateAmbassador extends NullFederateAmbassador {
         }
     }
 
+    @Override
     public void federationSynchronized(String synchronizationPointLabel) throws FederateInternalError {
         pendingSynchronizationPoints.remove(synchronizationPointLabel);
         log.info("synchronization point achieved: " + synchronizationPointLabel);
     }
 
+    @Override
     public void timeRegulationEnabled(LogicalTime theFederateTime)
             throws InvalidFederationTime, EnableTimeRegulationWasNotPending, FederateInternalError {
         isTimeRegulating = true;
@@ -101,6 +104,7 @@ public class FederateAmbassador extends NullFederateAmbassador {
         log.info("time regulation enabled: t=" + logicalTime);
     }
 
+    @Override
     public void timeConstrainedEnabled(LogicalTime theFederateTime)
             throws InvalidFederationTime, EnableTimeConstrainedWasNotPending, FederateInternalError {
         isTimeConstrained = true;
@@ -108,6 +112,7 @@ public class FederateAmbassador extends NullFederateAmbassador {
         log.info("time constrained enabled: t=" + logicalTime);
     }
 
+    @Override
     public void timeAdvanceGrant(LogicalTime theTime)
             throws InvalidFederationTime, TimeAdvanceWasNotInProgress, FederateInternalError {
         isTimeAdvancing = false;
@@ -115,6 +120,7 @@ public class FederateAmbassador extends NullFederateAmbassador {
         log.info("time advance granted: t=" + logicalTime);
     }
 
+    @Override
     public void receiveInteraction(int interactionClass, ReceivedInteraction theInteraction, byte[] userSuppliedTag)
             throws InteractionClassNotKnown, InteractionParameterNotKnown, FederateInternalError {
         try {
@@ -124,6 +130,7 @@ public class FederateAmbassador extends NullFederateAmbassador {
         }
     }
 
+    @Override
     public void receiveInteraction(int interactionClass, ReceivedInteraction theInteraction, byte[] userSuppliedTag,
             LogicalTime theTime, EventRetractionHandle eventRetractionHandle)
             throws InteractionClassNotKnown, InteractionParameterNotKnown, InvalidFederationTime,
@@ -133,6 +140,7 @@ public class FederateAmbassador extends NullFederateAmbassador {
         log.debug("received " + newInteraction.toString());
     }
 
+    @Override
     public void discoverObjectInstance(int theObject, int theObjectClass, String objectName)
             throws CouldNotDiscover, ObjectClassNotKnown, FederateInternalError {
         ObjectDetails details = new ObjectDetails(theObjectClass, theObject, objectName);
@@ -143,6 +151,7 @@ public class FederateAmbassador extends NullFederateAmbassador {
         log.info("discovered object " + details);
     }
 
+    @Override
     public void reflectAttributeValues(int theObject, ReflectedAttributes theAttributes, byte[] userSuppliedTag)
             throws ObjectNotKnown, AttributeNotKnown, FederateOwnsAttributes, FederateInternalError {
         try {
@@ -152,6 +161,7 @@ public class FederateAmbassador extends NullFederateAmbassador {
         }
     }
 
+    @Override
     public void reflectAttributeValues(int theObject, ReflectedAttributes theAttributes, byte[] userSuppliedTag,
             LogicalTime theTime, EventRetractionHandle retractionHandle)
             throws ObjectNotKnown, AttributeNotKnown, FederateOwnsAttributes, InvalidFederationTime,
@@ -168,6 +178,7 @@ public class FederateAmbassador extends NullFederateAmbassador {
         log.debug("received " + newObjectReflection.toString());
     }
 
+    @Override
     public void removeObjectInstance(int theObject, byte[] userSuppliedTag)
             throws ObjectNotKnown, FederateInternalError {
         try {
@@ -177,6 +188,7 @@ public class FederateAmbassador extends NullFederateAmbassador {
         }
     }
 
+    @Override
     public void removeObjectInstance(int theObject, byte[] userSuppliedTag, LogicalTime theTime,
             EventRetractionHandle retractionHandle)
             throws ObjectNotKnown, InvalidFederationTime, FederateInternalError {
