@@ -95,6 +95,7 @@ public class InjectionFederate {
 
     private static final String SIMULATION_END = "InteractionRoot.C2WInteractionRoot.SimulationControl.SimEnd";
     private static final String FEDERATE_JOIN = "InteractionRoot.C2WInteractionRoot.FederateJoinInteraction";
+    private static final String FEDERATE_RESIGN = "InteractionRoot.C2WInteractionRoot.FederateResignInteraction";
 
     private InjectionFederateConfig configuration;
     private InjectionCallback injectionCallback;
@@ -106,6 +107,8 @@ public class InjectionFederate {
     private boolean isRunning = false;
     private boolean receivedSimEnd = false;
     private boolean exitFlag = false;
+    
+    private String federateId;
     
     /**
      * This helper method creates an {@link InjectionFederateConfig} from a JSON configuration file that can then be
@@ -140,6 +143,7 @@ public class InjectionFederate {
         }
         fedAmb = new FederateAmbassador();
         objectModel = new ObjectModel(configuration.getFomFilepath());
+        federateId = String.format("%s-%s", configuration.getFederateName(), UUID.randomUUID());
     }
     
     /**
@@ -191,6 +195,7 @@ public class InjectionFederate {
             if (receivedSimEnd) {
                 synchronize(SynchronizationPoints.ReadyToResign);
             }
+            notifyOfFederationResign();
             resignFederationExecution();
         } catch (FederateNotExecutionMember | TimeAdvanceAlreadyInProgress e) {
             throw new RTIAmbassadorException("unreachable code", e);
@@ -733,7 +738,6 @@ public class InjectionFederate {
             return;
         }
         Map<String, String> params = new HashMap<String, String>();
-        String federateId = String.format("%s-%s", configuration.getFederateName(), UUID.randomUUID());
         params.put("FederateId", federateId);
         params.put("FederateType", configuration.getFederateName());
         if (configuration.getIsLateJoiner()) {
@@ -749,6 +753,39 @@ public class InjectionFederate {
             throw new RTIAmbassadorException("unreachable code", e);
         } catch (NameNotFound e) {
             throw new RTIAmbassadorException("unexpected parameters for " + FEDERATE_JOIN, e);
+        }
+    }
+    
+    private void notifyOfFederationResign()
+            throws FederateNotExecutionMember {
+        log.trace("notifyOfFederationResign");
+        boolean isPublished = false;
+        for (InteractionClassType interaction : objectModel.getPublishedInteractions()) {
+            log.trace("checking " + objectModel.getClassPath(interaction));
+            if (objectModel.getClassPath(interaction).equals(FEDERATE_RESIGN)) {
+                isPublished = true;
+                break;
+            }
+        }
+        if (!isPublished) {
+            log.warn("not configured to publish " + FEDERATE_RESIGN);
+            return;
+        }
+        Map<String, String> params = new HashMap<String, String>();
+        params.put("FederateId", federateId);
+        params.put("FederateType", configuration.getFederateName());
+        if (configuration.getIsLateJoiner()) {
+            params.put("IsLateJoiner", "true");
+        } else {
+            params.put("IsLateJoiner", "false");
+        }
+        try {
+            injectInteraction(FEDERATE_RESIGN, params); // does this need a timestamp ?
+        } catch (InteractionClassNotPublished e) {
+            // FEDERATE_RESIGN is in the published interactions set
+            throw new RTIAmbassadorException("unreachable code", e);
+        } catch (NameNotFound e) {
+            throw new RTIAmbassadorException("unexpected parameters for " + FEDERATE_RESIGN, e);
         }
     }
     
@@ -777,7 +814,7 @@ public class InjectionFederate {
     private void resignFederationExecution() throws FederateNotExecutionMember {
         log.info("resigning from the federation execution " + configuration.getFederationId());
         try {
-            rtiAmb.resignFederationExecution(ResignAction.NO_ACTION);
+            rtiAmb.resignFederationExecution(ResignAction.DELETE_OBJECTS);
         } catch (InvalidResignAction e) {
             // ResignAction.NO_ACTION is defined in Portico
             throw new RTIAmbassadorException("unreachable code", e);
