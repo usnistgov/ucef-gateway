@@ -87,6 +87,12 @@ import hla.rti.jlc.RtiFactoryFactory;
  * management, time management, and data distribution management services are not exposed through the public API. Both
  * the save/restore services and ownership transfer services are unimplemented, and this class will throw exceptions
  * if the federation attempts to invoke either service.
+ * <p>
+ * This class has trivial support for the configuration option isLateJoiner. A federate configured to join late will
+ * ignore the three synchronization points readyToPopulate, readyToRun, and readyToResign. This will cause a deadlock
+ * scenario if the federate joins at t=0 before the readyToRun synchronization point has been achieved. There is no
+ * distinction between the {@link InjectionCallback#initializeSelf} and {@link InjectionCallback#initializeWithPeers}
+ * callbacks for a late joiner, both will be called at the same time in the life cycle (right after joining).
  * 
  * @author Thomas Roth
  */
@@ -183,9 +189,13 @@ public class InjectionFederate {
             notifyOfFederationJoin();
             
             injectionCallback.initializeSelf();
-            synchronize(SynchronizationPoints.ReadyToPopulate); // should not do if late joiner ?
+            if (!configuration.getIsLateJoiner()) {
+                synchronize(SynchronizationPoints.ReadyToPopulate);
+            }
             injectionCallback.initializeWithPeers();
-            synchronize(SynchronizationPoints.ReadyToRun);
+            if (!configuration.getIsLateJoiner()) {
+                synchronize(SynchronizationPoints.ReadyToRun);
+            }
             
             while (!isExitCondition()) {
                 log.trace("run t=" + getLogicalTime());
@@ -193,7 +203,7 @@ public class InjectionFederate {
                 advanceLogicalTime();
             }
             
-            if (receivedSimEnd) {
+            if (!configuration.getIsLateJoiner() && receivedSimEnd) {
                 synchronize(SynchronizationPoints.ReadyToResign);
             }
             notifyOfFederationResign();
