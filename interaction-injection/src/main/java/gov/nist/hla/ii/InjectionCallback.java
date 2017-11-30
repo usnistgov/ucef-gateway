@@ -11,32 +11,42 @@ import java.util.Map;
  */
 public interface InjectionCallback {
     /**
-     * This callback is invoked once per received interaction. It will be called during each logical time step between
-     * {@link #beforeTimeStep} and {@link #afterTimeStep}. It will also be called for receive order interactions during
-     * explicit calls from the concrete implementation of this interface to {@link InjectionFederate#tick}.
+     * This callback is invoked once per received interaction. All interactions sent with a timestamp will be received
+     * in a given logical time step before the call to {@link #doTimeStep}. This callback can also be invoked during
+     * explicit calls to {@link InjectionFederate#tick} when polling for receive order interactions.
      * <p>
      * A federate does not receive its own sent interactions. It is not possible to determine whether a received
      * interaction is receive order or not from this callback.
+     * <p>
+     * The value of {@code timeStep} is not the current logical time granted to the federate in the federation, but
+     * rather the last logical time used for an advance time request. These two values will be identical during the
+     * {@link #doTimeStep} callback, but {@code timeStep} will otherwise be equal to the next (requested) time step.
+     * This detail should be irrelevant for most implementations.
      * 
-     * @param timeStep The current logical time
+     * @param timeStep The last requested logical time
      * @param className The HLA class name of the received interaction
-     * @param parameters A map of parameter names to their current values
+     * @param parameters A map of parameter names to their received values
      */
     void receiveInteraction(Double timeStep, String className, Map<String, String> parameters);
 
     /**
-     * This callback is invoked once per received object reflection. It will be called during each logical time step
-     * between {@link #beforeTimeStep} and {@link #afterTimeStep}. It will also be called for receive order updates
-     * during explicit calls from the concrete implementation of this interface to {@link InjectionFederate#tick}.
+     * This callback is invoked once per received object reflection. All object updates sent with a timestamp will be
+     * received in a given logical time step before the call to {@link #doTimeStep}. This callback can also be invoked
+     * during explicit calls to {@link InjectionFederate#tick} when polling for receive order object updates.
      * <p>
      * The received attributes will be the subset of the object's attributes that have been updated. A federate does
      * not receive its own object updates. It is not possible to determine whether an object update was sent using
      * receive order or not from this callback.
+     * <p>
+     * The value of {@code timeStep} is not the current logical time granted to the federate in the federation, but
+     * rather the last logical time used for an advance time request. These two values will be identical during the
+     * {@link #doTimeStep} callback, but {@code timeStep} will otherwise be equal to the next (requested) time step.
+     * This detail should be irrelevant for most implementations.
      * 
-     * @param timeStep The current logical time
+     * @param timeStep The last requested logical time
      * @param className The HLA class name of the updated object
      * @param instanceName The unique instance name of the updated object
-     * @param attributes A map of attribute names to their current values
+     * @param attributes A map of attribute names to their received values
      */
     void receiveObject(Double timeStep, String className, String instanceName, Map<String, String> attributes);
     
@@ -56,27 +66,18 @@ public interface InjectionCallback {
     void initializeWithPeers();
 
     /**
-     * This callback should be used to perform functions that must occur at the start of a logical time step. It is
-     * called immediately after the logical time grant from HLA, and occurs before interactions and object updates are
-     * received. It is called exactly once per logical time step.
-     * 
-     * @param timeStep The current logical time
-     */
-    void beforeTimeStep(Double timeStep);
-
-    /**
-     * This callback should be used to perform functions that must occur at the end of a logical time step. It is
-     * called immediately before the logical time advance request to HLA, and occurs after all interactions and object
+     * This callback should be used to perform functions that must occur during each logical time step. It is called
+     * immediately before the logical time advance request to HLA, and occurs after all interactions and object
      * updates have been received. It is called exactly once per logical time step.
      * 
      * @param timeStep The current logical time
      */
-    void afterTimeStep(Double timeStep);
+    void doTimeStep(Double timeStep);
     
     /**
      * This callback should be used to perform cleanup functions for the user application. It is called after the
      * {@link InjectionFederate} resigns from the federation, but before {@link InjectionFederate#run} returns. It
      * will be called exactly once per {@link InjectionFederate#run}, and no other callbacks will be called after it.
      */
-    void afterResignation();
+    void terminate();
 }

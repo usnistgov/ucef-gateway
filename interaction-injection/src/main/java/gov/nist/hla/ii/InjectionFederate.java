@@ -108,6 +108,8 @@ public class InjectionFederate {
     private boolean receivedSimEnd = false;
     private boolean exitFlag = false;
     
+    private double lastRequestedTime;
+    
     private String federateId;
     
     /**
@@ -159,6 +161,7 @@ public class InjectionFederate {
         }
         this.exitFlag = false;
         this.receivedSimEnd = false;
+        this.lastRequestedTime = 0;
         this.isRunning = true;
         
         try {
@@ -186,9 +189,7 @@ public class InjectionFederate {
             
             while (!isExitCondition()) {
                 log.trace("run t=" + getLogicalTime());
-                injectionCallback.beforeTimeStep(getLogicalTime());
-                handleSubscriptions();
-                injectionCallback.afterTimeStep(getLogicalTime());
+                injectionCallback.doTimeStep(lastRequestedTime);
                 advanceLogicalTime();
             }
             
@@ -200,7 +201,7 @@ public class InjectionFederate {
         } catch (FederateNotExecutionMember | TimeAdvanceAlreadyInProgress e) {
             throw new RTIAmbassadorException("unreachable code", e);
         }
-        injectionCallback.afterResignation();
+        injectionCallback.terminate();
         this.isRunning = false;
     }
     
@@ -791,11 +792,11 @@ public class InjectionFederate {
     
     private void advanceLogicalTime()
             throws TimeAdvanceAlreadyInProgress, FederateNotExecutionMember {
-        Double newLogicalTime = fedAmb.getLogicalTime() + configuration.getStepSize();
-        log.info("advancing logical time to " + newLogicalTime);
+        lastRequestedTime = fedAmb.getLogicalTime() + configuration.getStepSize();
+        log.info("advancing logical time to " + lastRequestedTime);
         try {
             fedAmb.setTimeAdvancing();
-            rtiAmb.timeAdvanceRequest(new DoubleTime(newLogicalTime));
+            rtiAmb.timeAdvanceRequest(new DoubleTime(lastRequestedTime));
         } catch (InvalidFederationTime | FederationTimeAlreadyPassed e) {
             throw new RTIAmbassadorException(e);
         } catch (EnableTimeRegulationPending | EnableTimeConstrainedPending e) {
@@ -860,7 +861,7 @@ public class InjectionFederate {
                 int classHandle = receivedInteraction.getClassHandle();
                 String interactionName = rtiAmb.getInteractionClassName(classHandle);
                 Map<String, String> parameters = convertToMap(receivedInteraction);
-                injectionCallback.receiveInteraction(fedAmb.getLogicalTime(), interactionName, parameters);
+                injectionCallback.receiveInteraction(lastRequestedTime, interactionName, parameters);
     
                 if (interactionName.equals(SIMULATION_END)) {
                     receivedSimEnd = true;
@@ -873,7 +874,7 @@ public class InjectionFederate {
                 String className = rtiAmb.getObjectClassName(classHandle);
                 String instanceName = receivedObjectReflection.getInstanceName();
                 Map<String, String> parameters = convertToMap(classHandle, receivedObjectReflection);
-                injectionCallback.receiveObject(fedAmb.getLogicalTime(), className, instanceName, parameters);
+                injectionCallback.receiveObject(lastRequestedTime, className, instanceName, parameters);
             }
     
             String removedObjectName;
