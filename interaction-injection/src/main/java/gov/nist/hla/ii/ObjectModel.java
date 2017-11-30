@@ -276,7 +276,7 @@ public class ObjectModel {
     }
     
     private void initializeInteractionVariables() {
-        log.trace("parsing interaction classes");
+        log.trace("initializeInteractionVariables");
         
         Queue<InteractionClassType> unprocessedInteractions = new LinkedList<InteractionClassType>();
         unprocessedInteractions.add(objectModel.getInteractions().getInteractionClass());
@@ -312,7 +312,7 @@ public class ObjectModel {
                 }
             }
             
-            log.debug("finished " + classPath + " with " + parameters.size() + " parameters");
+            log.debug("parsed " + classPath + " with " + parameters.size() + " parameters");
             
             interactionToClassPath.put(nextInteraction, classPath);
             classPathToInteraction.put(classPath, nextInteraction);
@@ -327,13 +327,11 @@ public class ObjectModel {
             
             unprocessedInteractions.addAll(nextInteraction.getInteractionClass());
         }
-        
-        log.info("interaction classes initialized");
     }
     
     // follow hla convention that sharing tag for object is based on its attributes
     private void initializeObjectVariables() {
-        log.trace("parsing object classes");
+        log.trace("initializeObjectVariables");
         
         Queue<ObjectClassType> unprocessedObjects = new LinkedList<ObjectClassType>();
         unprocessedObjects.add(objectModel.getObjects().getObjectClass());
@@ -369,7 +367,7 @@ public class ObjectModel {
                 }
             }
             
-            log.debug("finished " + classPath + " with " + attributes.size() + " attributes");
+            log.debug("parsed " + classPath + " with " + attributes.size() + " attributes");
             
             objectToClassPath.put(nextObject, classPath);
             classPathToObject.put(classPath, nextObject);
@@ -384,7 +382,5 @@ public class ObjectModel {
             
             unprocessedObjects.addAll(nextObject.getObjectClass());
         }
-        
-        log.info("object classes initialized");
     }
 }

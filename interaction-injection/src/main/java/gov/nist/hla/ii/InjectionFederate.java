@@ -509,7 +509,6 @@ public class InjectionFederate {
         while (fedAmb.isSynchronizationPointPending(label)) {
             tick();
         }
-        log.info("federation synchronized on " + label);
     }
     
     private boolean isExitCondition() {
@@ -548,8 +547,9 @@ public class InjectionFederate {
     private void enableAsynchronousDelivery()
             throws FederateNotExecutionMember {
         try {
-            log.info("enabling asynchronous delivery of receive order messages");
+            log.trace("enableAsynchronousDelivery");
             rtiAmb.enableAsynchronousDelivery();
+            log.info("asynchronous delivery enabled");
         } catch (AsynchronousDeliveryAlreadyEnabled e) {
             log.debug("asynchronous delivery already enabled");
         } catch (SaveInProgress | RestoreInProgress e) {
@@ -562,7 +562,7 @@ public class InjectionFederate {
     private void enableTimeConstrained()
             throws FederateNotExecutionMember, TimeAdvanceAlreadyInProgress {
         try {
-            log.info("enabling time constrained");
+            log.trace("enableTimeConstrained");
             rtiAmb.enableTimeConstrained();
             while (fedAmb.isTimeConstrained() == false) {
                 tick();
@@ -581,7 +581,7 @@ public class InjectionFederate {
     private void enableTimeRegulation()
             throws FederateNotExecutionMember, TimeAdvanceAlreadyInProgress {
         try {
-            log.info("enabling time regulation");
+            log.trace("enableTimeRegulation");
             rtiAmb.enableTimeRegulation(
                     new DoubleTime(fedAmb.getLogicalTime()),
                     new DoubleTimeInterval(configuration.getLookAhead()));
@@ -605,15 +605,12 @@ public class InjectionFederate {
             throws FederateNotExecutionMember {
         log.trace("publishAndSubscribe");
         try {
-            log.debug("publishing interactions");
             for (InteractionClassType interaction : objectModel.getPublishedInteractions()) {
                 publishInteraction(objectModel.getClassPath(interaction));
             }
-            log.debug("subscribing to interactions");
             for (InteractionClassType interaction : objectModel.getSubscribedInteractions()) {
                 subscribeInteraction(objectModel.getClassPath(interaction));
             }
-            log.debug("publishing object attributes");
             for (ObjectClassType object : objectModel.getPublishedObjects()) {
                 Set<String> attributeNames = new HashSet<String>();
                 for (AttributeType attribute : objectModel.getPublishedAttributes(object)) {
@@ -621,7 +618,6 @@ public class InjectionFederate {
                 }
                 publishObject(objectModel.getClassPath(object), attributeNames.toArray(new String[0]));
             }
-            log.debug("subscribing to object attributes");
             for (ObjectClassType object : objectModel.getSubscribedObjects()) {
                 Set<String> attributeNames = new HashSet<String>();
                 for (AttributeType attribute : objectModel.getSubscribedAttributes(object)) {
@@ -636,7 +632,7 @@ public class InjectionFederate {
     
     private void publishInteraction(String classPath)
             throws NameNotFound, FederateNotExecutionMember {
-        log.info("creating HLA publication for the interaction " + classPath);
+        log.info("creating publication for " + classPath);
         try {
             int classHandle = rtiAmb.getInteractionClassHandle(classPath);
             rtiAmb.publishInteractionClass(classHandle);
@@ -652,7 +648,7 @@ public class InjectionFederate {
     
     private void subscribeInteraction(String classPath)
             throws NameNotFound, FederateNotExecutionMember {
-        log.info("creating HLA subscription for the interaction " + classPath);
+        log.info("creating subscription for " + classPath);
         try {
             int classHandle = rtiAmb.getInteractionClassHandle(classPath);
             rtiAmb.subscribeInteractionClass(classHandle);
@@ -685,8 +681,7 @@ public class InjectionFederate {
         
     private void publishObject(String classPath, String... attributes)
             throws NameNotFound, FederateNotExecutionMember {
-        log.info("creating publication for " + classPath + " with " + attributes.length + " attributes");
-        log.debug("\tattributes : " + Arrays.toString(attributes));
+        log.info("creating publication for " + classPath + " attributes " + Arrays.toString(attributes));
         try {
             int classHandle = rtiAmb.getObjectClassHandle(classPath);
             AttributeHandleSet attributeHandleSet = convertToAttributeHandleSet(classHandle, attributes);
@@ -706,8 +701,7 @@ public class InjectionFederate {
     
     private void subscribeObject(String classPath, String... attributes)
             throws NameNotFound, FederateNotExecutionMember {
-        log.info("creating subscription for " + classPath + " with " + attributes.length + " attributes");
-        log.debug("\tattributes : " + Arrays.toString(attributes));
+        log.info("creating subscription for " + classPath + " attributes" + Arrays.toString(attributes));
         try {
             int classHandle = rtiAmb.getObjectClassHandle(classPath);
             AttributeHandleSet attributeHandleSet = convertToAttributeHandleSet(classHandle, attributes);
@@ -726,15 +720,8 @@ public class InjectionFederate {
     private void notifyOfFederationJoin()
             throws FederateNotExecutionMember {
         log.trace("notifyOfFederationJoin");
-        boolean isPublished = false;
-        for (InteractionClassType interaction : objectModel.getPublishedInteractions()) {
-            log.trace("checking " + objectModel.getClassPath(interaction));
-            if (objectModel.getClassPath(interaction).equals(FEDERATE_JOIN)) {
-                isPublished = true;
-                break;
-            }
-        }
-        if (!isPublished) {
+        InteractionClassType federateJoin = objectModel.getInteraction(FEDERATE_JOIN);
+        if (!objectModel.getPublishedInteractions().contains(federateJoin)) {
             log.warn("not configured to publish " + FEDERATE_JOIN);
             return;
         }
@@ -760,15 +747,8 @@ public class InjectionFederate {
     private void notifyOfFederationResign()
             throws FederateNotExecutionMember {
         log.trace("notifyOfFederationResign");
-        boolean isPublished = false;
-        for (InteractionClassType interaction : objectModel.getPublishedInteractions()) {
-            log.trace("checking " + objectModel.getClassPath(interaction));
-            if (objectModel.getClassPath(interaction).equals(FEDERATE_RESIGN)) {
-                isPublished = true;
-                break;
-            }
-        }
-        if (!isPublished) {
+        InteractionClassType federateResign = objectModel.getInteraction(FEDERATE_RESIGN);
+        if (!objectModel.getPublishedInteractions().contains(federateResign)) {
             log.warn("not configured to publish " + FEDERATE_RESIGN);
             return;
         }
@@ -809,7 +789,6 @@ public class InjectionFederate {
         while (fedAmb.isTimeAdvancing() == true) {
             tick();
         }
-        log.info("advanced logical time to " + fedAmb.getLogicalTime());
     }
     
     private void resignFederationExecution() throws FederateNotExecutionMember {
@@ -834,7 +813,6 @@ public class InjectionFederate {
             int parameterHandle = receivedInteraction.getParameterHandle(i);
             String parameterName = rtiAmb.getParameterName(parameterHandle, interactionHandle);
             String parameterValue = receivedInteraction.getParameterValue(i);
-            log.debug(parameterName + "=" + parameterValue);
             parameters.put(parameterName, parameterValue);
         }
         return parameters;
@@ -847,7 +825,6 @@ public class InjectionFederate {
             int attributeHandle = receivedObjectReflection.getAttributeHandle(i);
             String attributeName = rtiAmb.getAttributeName(attributeHandle, objectClassHandle);
             String attributeValue = receivedObjectReflection.getAttributeValue(i);
-            log.debug(attributeName + "=" + attributeValue);
             attributes.put(attributeName, attributeValue);
         }
         return attributes;
