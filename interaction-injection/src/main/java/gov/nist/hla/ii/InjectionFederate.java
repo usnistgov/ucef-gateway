@@ -360,9 +360,11 @@ public class InjectionFederate {
      */
     public void injectInteraction(String className, Map<String, String> parameters)
             throws FederateNotExecutionMember, NameNotFound, InteractionClassNotPublished {
+        log.trace("injectInteraction " + className + " " + Arrays.toString(parameters.entrySet().toArray()));
         try {
             int classHandle = rtiAmb.getInteractionClassHandle(className);
-            SuppliedParameters suppliedParameters = convertToSuppliedParameters(classHandle, parameters);
+            Map<String, String> modifiedParameters = addRootParameters(className, parameters);
+            SuppliedParameters suppliedParameters = convertToSuppliedParameters(classHandle, modifiedParameters);
             rtiAmb.sendInteraction(classHandle, suppliedParameters, null);
         } catch (InteractionClassNotDefined | InteractionParameterNotDefined e) {
             // classHandle set using the RTI ambassador
@@ -398,7 +400,8 @@ public class InjectionFederate {
                 + " " + timestamp);
         try {
             int classHandle = rtiAmb.getInteractionClassHandle(className);
-            SuppliedParameters suppliedParameters = convertToSuppliedParameters(classHandle, parameters);
+            Map<String, String> modifiedParameters = addRootParameters(className, parameters);
+            SuppliedParameters suppliedParameters = convertToSuppliedParameters(classHandle, modifiedParameters);
             rtiAmb.sendInteraction(classHandle, suppliedParameters, null, new DoubleTime(timestamp));
         } catch (InteractionClassNotDefined | InteractionParameterNotDefined e) {
             // classHandle set using the RTI ambassador
@@ -409,6 +412,19 @@ public class InjectionFederate {
         } catch (RTIinternalError | ConcurrentAccessAttempted e) {
             throw new RTIAmbassadorException(e);
         } 
+    }
+    
+    private Map<String, String> addRootParameters(String className, Map<String, String> parameters) {
+        log.trace("addRootParameters " + className + " " + Arrays.toString(parameters.entrySet().toArray()));
+        Map<String, String> modifiedParameters = new HashMap<String, String>(parameters);
+        if (className.toLowerCase().contains("c2winteractionroot")) {
+            log.trace("adding C2WInteractionRoot parameters if missing");
+            modifiedParameters.putIfAbsent("sourceFed", federateId);
+            modifiedParameters.putIfAbsent("originFed", federateId);
+            modifiedParameters.putIfAbsent("federateFilter", "");
+            modifiedParameters.putIfAbsent("actualLogicalGenerationTime", Double.toString(0.0));
+        }
+        return modifiedParameters;
     }
     
     private SuppliedAttributes convertToSuppliedAttributes(int classHandle, Map<String, String> attributes)
@@ -437,6 +453,7 @@ public class InjectionFederate {
      */
     public void updateObject(String instanceName, Map<String, String> attributes)
             throws FederateNotExecutionMember, ObjectNotKnown, NameNotFound, AttributeNotOwned {
+        log.trace("updateObject " + instanceName + " " + Arrays.toString(attributes.entrySet().toArray()));
         try {
             int instanceHandle = rtiAmb.getObjectInstanceHandle(instanceName);
             int classHandle = rtiAmb.getObjectClass(instanceHandle);
