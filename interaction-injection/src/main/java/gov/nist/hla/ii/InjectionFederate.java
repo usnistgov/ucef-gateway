@@ -733,6 +733,7 @@ public class InjectionFederate {
             int classHandle = rtiAmb.getObjectClassHandle(classPath);
             AttributeHandleSet attributeHandleSet = convertToAttributeHandleSet(classHandle, attributes);
             rtiAmb.subscribeObjectClassAttributes(classHandle, attributeHandleSet);
+            rtiAmb.tick(); // temp fix due to portico issue with duplicate discovery
         } catch (ObjectClassNotDefined | AttributeNotDefined e) {
             // classHandle set using the RTI ambassador
             // convertToAttributeHandleSet returns valid attributes
