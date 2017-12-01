@@ -1,14 +1,25 @@
 package gov.nist.hla.ii.config;
 
+import gov.nist.hla.ii.exception.ValueNotSet;
+
 public class InjectionFederateConfig {
-    private String federateName;
+    private String federateName = "InjectionFederate";
+    
     private String federationId;
+    private boolean federationIdSet = false;
+    
     private String fomFilepath;
-    private int maxReconnectAttempts;
-    private long waitReconnectMs;
-    private boolean isLateJoiner;
-    private double lookAhead;
-    private double stepSize;
+    private boolean fomFilepathSet = false;
+    
+    private int maxReconnectAttempts = 5;
+    
+    private long waitReconnectMs = 5000;
+    
+    private boolean isLateJoiner = false;
+    
+    private double lookAhead = 1.0;
+    
+    private double stepSize = 0.1;
     
     public void setFederateName(String federateName) {
         this.federateName = federateName;
@@ -20,17 +31,25 @@ public class InjectionFederateConfig {
 
     public void setFederationId(String federationId) {
         this.federationId = federationId;
+        this.federationIdSet = true;
     }
     
     public String getFederationId() {
+        if (!federationIdSet) {
+            throw new ValueNotSet("federationId");
+        }
         return federationId;
     }
 
     public void setFomFilepath(String fomFilepath) {
         this.fomFilepath = fomFilepath;
+        this.fomFilepathSet = true;
     }
 
     public String getFomFilepath() {
+        if (!fomFilepathSet) {
+            throw new ValueNotSet("fomFilepath");
+        }
         return fomFilepath;
     }
     
