@@ -278,8 +278,14 @@ public class ObjectModel {
     private void initializeInteractionVariables() {
         log.trace("initializeInteractionVariables");
         
+        InteractionClassType interactionRoot = objectModel.getInteractions().getInteractionClass();
+        if (interactionRoot == null) {
+            log.info("empty interactions table");
+            return;
+        }
+        
         Queue<InteractionClassType> unprocessedInteractions = new LinkedList<InteractionClassType>();
-        unprocessedInteractions.add(objectModel.getInteractions().getInteractionClass());
+        unprocessedInteractions.add(interactionRoot);
         
         while (!unprocessedInteractions.isEmpty()) {
             InteractionClassType nextInteraction = unprocessedInteractions.poll();
@@ -333,8 +339,14 @@ public class ObjectModel {
     private void initializeObjectVariables() {
         log.trace("initializeObjectVariables");
         
+        ObjectClassType objectRoot = objectModel.getObjects().getObjectClass();
+        if (objectRoot == null) {
+            log.info("empty objects table");
+            return;
+        }
+        
         Queue<ObjectClassType> unprocessedObjects = new LinkedList<ObjectClassType>();
-        unprocessedObjects.add(objectModel.getObjects().getObjectClass());
+        unprocessedObjects.add(objectRoot);
         
         while (!unprocessedObjects.isEmpty()) {
             ObjectClassType nextObject = unprocessedObjects.poll();
