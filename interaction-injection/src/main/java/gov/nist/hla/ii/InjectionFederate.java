@@ -111,6 +111,7 @@ public class InjectionFederate {
     private ObjectModel objectModel;
     
     private boolean isRunning = false;
+    private boolean hasTimeStarted = false;
     private boolean receivedSimEnd = false;
     private boolean exitFlag = false;
     
@@ -167,6 +168,7 @@ public class InjectionFederate {
         }
         this.exitFlag = false;
         this.receivedSimEnd = false;
+        this.hasTimeStarted = false;
         this.lastRequestedTime = 0;
         this.isRunning = true;
         
@@ -196,6 +198,7 @@ public class InjectionFederate {
             if (!configuration.getIsLateJoiner()) {
                 synchronize(SynchronizationPoints.ReadyToRun);
             }
+            this.hasTimeStarted = true;
             
             while (!isExitCondition()) {
                 log.trace("run t=" + getLogicalTime());
@@ -257,6 +260,17 @@ public class InjectionFederate {
      */
     public double getTimeStamp() {
         return fedAmb.getLogicalTime() + configuration.getLookAhead();
+    }
+    
+    /**
+     * Check whether the local federate has begun its logical time progression loop. This method can be used in both
+     * {@link InjectionCallback#receiveInteraction} and {@link InjectionCallback#ReceiveObject} to distinguish between
+     * messages that arrive during logical time progression, and those that arrive during initialization.
+     * 
+     * @return True if the federation has achieved the synchronization point readyToRun
+     */
+    public boolean hasTimeStarted() {
+        return this.hasTimeStarted;
     }
     
     /**
