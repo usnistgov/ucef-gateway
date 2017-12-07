@@ -34,22 +34,22 @@ public class FederateAmbassador extends NullFederateAmbassador {
     private static final Logger log = LogManager.getLogger();
 
     private class ObjectDetails {
-        private int classHandle;
         private int instanceHandle;
+        private int classHandle;
         private String instanceName;
 
-        public ObjectDetails(int classHandle, int instanceHandle, String instanceName) {
-            this.classHandle = classHandle;
+        public ObjectDetails(int instanceHandle, int classHandle, String instanceName) {
             this.instanceHandle = instanceHandle;
+            this.classHandle = classHandle;
             this.instanceName = instanceName;
-        }
-
-        public int getClassHandle() {
-            return classHandle;
         }
         
         public int getInstanceHandle() {
             return instanceHandle;
+        }
+        
+        public int getClassHandle() {
+            return classHandle;
         }
 
         public String getInstanceName() {
@@ -57,7 +57,7 @@ public class FederateAmbassador extends NullFederateAmbassador {
         }
         
         public String toString() {
-            return String.format("name=%s handle=%d class=%d", instanceName, instanceHandle, classHandle);
+            return String.format("instance=%d class=%d name=%s", instanceHandle, classHandle, instanceName);
         }
     }
 
@@ -77,7 +77,7 @@ public class FederateAmbassador extends NullFederateAmbassador {
     private boolean isTimeRegulating = false;
     private boolean isTimeConstrained = false;
 
-    private double logicalTime = 0D;
+    private double logicalTime = 0.0;
 
     @Override
     public void announceSynchronizationPoint(String synchronizationPointLabel, byte[] userSuppliedTag)
@@ -143,12 +143,11 @@ public class FederateAmbassador extends NullFederateAmbassador {
     @Override
     public void discoverObjectInstance(int theObject, int theObjectClass, String objectName)
             throws CouldNotDiscover, ObjectClassNotKnown, FederateInternalError {
-        ObjectDetails details = new ObjectDetails(theObjectClass, theObject, objectName);
+        ObjectDetails details = new ObjectDetails(theObject, theObjectClass, objectName);
         if (objectInstances.put(theObject, details) != null) {
-            log.error("duplicate object " + details);
-            throw new FederateInternalError("discovered multiple object instances with handle " + theObject);
+            throw new FederateInternalError("discovered duplicate object " + details.toString());
         }
-        log.info("discovered object " + details);
+        log.info("discovered object " + details.toString());
     }
 
     @Override
@@ -168,12 +167,10 @@ public class FederateAmbassador extends NullFederateAmbassador {
             FederateInternalError {
         ObjectDetails details = objectInstances.get(theObject);
         if (details == null) {
-            log.error("unknown object " + details);
             throw new ObjectNotKnown("no discovered object instance with handle " + theObject);
         }
-        int classHandle = details.getClassHandle();
-        String instanceName = details.getInstanceName();
-        ObjectReflection newObjectReflection = new ObjectReflection(classHandle, instanceName, theAttributes);
+        ObjectReflection newObjectReflection = 
+                new ObjectReflection(details.getClassHandle(), details.getInstanceName(), theAttributes);
         receivedObjectReflections.add(newObjectReflection);
         log.debug("received " + newObjectReflection.toString());
     }
@@ -194,12 +191,10 @@ public class FederateAmbassador extends NullFederateAmbassador {
             throws ObjectNotKnown, InvalidFederationTime, FederateInternalError {
         ObjectDetails details = objectInstances.remove(theObject);
         if (details == null) {
-            log.error("unknown object " + details);
             throw new ObjectNotKnown("no discovered object instance with handle " + theObject);
         }
-        String instanceName = details.getInstanceName();
-        removedObjectInstances.add(instanceName);
-        log.info("removed object " + details);
+        removedObjectInstances.add(details.getInstanceName());
+        log.info("removed object " + details.toString());
     }
 
     public boolean isSynchronizationPointPending(String label) {
