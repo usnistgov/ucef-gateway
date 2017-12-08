@@ -1,0 +1,159 @@
+{
+  "__OBJECTS__": {
+    "0cfd9556-27b9-411c-aa28-d46278edf81f": {
+      "attributes": {
+        "name": "TestFederate",
+        "TimeRegulating": "true",
+        "TimeConstrained": "true",
+        "Step": "1.0",
+        "Meld": "false",
+        "Lookahead": "0.2",
+        "InstantiationScript": "",
+        "GeneratorClass": "",
+        "FederateType": "1",
+        "EnableROAsynchronousDelivery": "true"
+      },
+      "__FEDERATE_BASE__": "JavaFederate",
+      "federates": [],
+      "__FEDERATE_TYPE__": "directly deployable",
+      "parameters": [],
+      "inputs": [
+        {
+          "GUID": "c8cb90b1-9700-40ba-9fba-3293496840d5"
+        }
+      ],
+      "outputs": [
+        {
+          "GUID": "c8cb90b1-9700-40ba-9fba-3293496840d5"
+        }
+      ],
+      "RegistryInfo": "",
+      "documentation": "No documentation exists yet.",
+      "repository": "No repository exists yet.",
+      "GUID": "0cfd9556-27b9-411c-aa28-d46278edf81f"
+    },
+    "e1af2af7-02e9-40e0-a4e6-ab927016c6b2": {
+      "attributes": {
+        "name": "InteractionRoot",
+        "Order": "timestamp",
+        "LogLevel": "NORMAL",
+        "EnableLogging": "false",
+        "Delivery": "reliable"
+      },
+      "__INTERACTION_BASE__": {
+        "GUID": "d26f7411-25fe-4cec-a79a-7af2b8bda5a3"
+      },
+      "parameters": [],
+      "GUID": "e1af2af7-02e9-40e0-a4e6-ab927016c6b2"
+    },
+    "96d2dca3-a257-4378-b48b-23683392e8da": {
+      "attributes": {
+        "name": "C2WInteractionRoot",
+        "Order": "timestamp",
+        "LogLevel": "NORMAL",
+        "EnableLogging": "false",
+        "Delivery": "reliable"
+      },
+      "__INTERACTION_BASE__": {
+        "GUID": "e1af2af7-02e9-40e0-a4e6-ab927016c6b2"
+      },
+      "parameters": [
+        {
+          "name": "originFed",
+          "ParameterType": "String",
+          "Hidden": "false"
+        },
+        {
+          "name": "sourceFed",
+          "ParameterType": "String",
+          "Hidden": "false"
+        },
+        {
+          "name": "actualLogicalGenerationTime",
+          "ParameterType": "double",
+          "Hidden": "false"
+        },
+        {
+          "name": "federateFilter",
+          "ParameterType": "String",
+          "Hidden": "false"
+        }
+      ],
+      "GUID": "96d2dca3-a257-4378-b48b-23683392e8da"
+    },
+    "c8cb90b1-9700-40ba-9fba-3293496840d5": {
+      "attributes": {
+        "name": "TestInteraction",
+        "Order": "timestamp",
+        "LogLevel": "NORMAL",
+        "EnableLogging": "false",
+        "Delivery": "reliable"
+      },
+      "__INTERACTION_BASE__": {
+        "GUID": "96d2dca3-a257-4378-b48b-23683392e8da"
+      },
+      "parameters": [
+        {
+          "name": "originFed",
+          "ParameterType": "String",
+          "Hidden": "false"
+        },
+        {
+          "name": "sourceFed",
+          "ParameterType": "String",
+          "Hidden": "false"
+        },
+        {
+          "name": "intValue",
+          "ParameterType": "int",
+          "Hidden": "false"
+        },
+        {
+          "name": "doubleValue",
+          "ParameterType": "double",
+          "Hidden": "false"
+        },
+        {
+          "name": "stringValue",
+          "ParameterType": "String",
+          "Hidden": "false"
+        },
+        {
+          "name": "booleanValue",
+          "ParameterType": "boolean",
+          "Hidden": "false"
+        },
+        {
+          "name": "actualLogicalGenerationTime",
+          "ParameterType": "double",
+          "Hidden": "false"
+        },
+        {
+          "name": "federateFilter",
+          "ParameterType": "String",
+          "Hidden": "false"
+        }
+      ],
+      "GUID": "c8cb90b1-9700-40ba-9fba-3293496840d5"
+    }
+  },
+  "__ROOT_OBJECT__": {
+    "GUID": "0cfd9556-27b9-411c-aa28-d46278edf81f",
+    "name": "TestFederate",
+    "version": "0.0.1",
+    "description": ""
+  },
+  "Federates": {
+    "0cfd9556-27b9-411c-aa28-d46278edf81f": ""
+  },
+  "COAs": {},
+  "Experiments": {},
+  "Interactions": {
+    "e1af2af7-02e9-40e0-a4e6-ab927016c6b2": "",
+    "96d2dca3-a257-4378-b48b-23683392e8da": "",
+    "c8cb90b1-9700-40ba-9fba-3293496840d5": ""
+  },
+  "Repositories": [],
+  "Builds": [],
+  "Executions": []
+}
