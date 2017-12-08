@@ -7,7 +7,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
@@ -116,8 +115,6 @@ public class InjectionFederate {
     
     private double lastRequestedTime;
     
-    private String federateId;
-    
     /**
      * Create an {@link InjectionFederateConfig} from a JSON configuration file that can be used to construct an
      * injection federate instance.
@@ -151,7 +148,6 @@ public class InjectionFederate {
         }
         fedAmb = new FederateAmbassador();
         objectModel = new ObjectModel(configuration.getFomFilepath());
-        federateId = String.format("%s-%s", configuration.getFederateName(), UUID.randomUUID());
     }
     
     /**
@@ -735,7 +731,7 @@ public class InjectionFederate {
         }
         
         Map<String, String> parameters = new HashMap<String, String>();
-        parameters.put("FederateId", federateId);
+        parameters.put("FederateId", configuration.getFederateName());
         parameters.put("FederateType", configuration.getFederateName());
         if (configuration.getIsLateJoiner()) {
             parameters.put("IsLateJoiner", "true");
@@ -763,7 +759,7 @@ public class InjectionFederate {
         }
         
         Map<String, String> parameters = new HashMap<String, String>();
-        parameters.put("FederateId", federateId);
+        parameters.put("FederateId", configuration.getFederateName());
         parameters.put("FederateType", configuration.getFederateName());
         if (configuration.getIsLateJoiner()) {
             parameters.put("IsLateJoiner", "true");
@@ -855,8 +851,8 @@ public class InjectionFederate {
                 int classHandle = receivedObjectReflection.getClassHandle();
                 String className = rtiAmb.getObjectClassName(classHandle);
                 String instanceName = receivedObjectReflection.getInstanceName();
-                Map<String, String> parameters = convertToMap(classHandle, receivedObjectReflection);
-                injectionCallback.receiveObject(lastRequestedTime, className, instanceName, parameters);
+                Map<String, String> attributes = convertToMap(classHandle, receivedObjectReflection);
+                injectionCallback.receiveObject(lastRequestedTime, className, instanceName, attributes);
             }
         } catch (ObjectClassNotDefined | AttributeNotDefined e) {
             // classHandle retrieved from the RTI ambassador
@@ -903,8 +899,8 @@ public class InjectionFederate {
         log.trace("addRootParameters " + className + " " + parameters.toString());
         Map<String, String> modifiedParameters = new HashMap<String, String>(parameters);
         if (className.toLowerCase().contains("c2winteractionroot")) {
-            modifiedParameters.putIfAbsent("sourceFed", federateId);
-            modifiedParameters.putIfAbsent("originFed", federateId);
+            modifiedParameters.putIfAbsent("sourceFed", configuration.getFederateName());
+            modifiedParameters.putIfAbsent("originFed", configuration.getFederateName());
             modifiedParameters.putIfAbsent("federateFilter", "");
             modifiedParameters.putIfAbsent("actualLogicalGenerationTime", Double.toString(0.0));
             log.debug("added C2WInteractionRoot parameters to " + className);
