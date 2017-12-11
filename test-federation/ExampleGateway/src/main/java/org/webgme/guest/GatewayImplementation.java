@@ -27,6 +27,8 @@ public class GatewayImplementation implements GatewayCallback {
     
     private GatewayFederate gateway;
     
+    private Map<String, String> objectState = new HashMap<String, String>();
+    
     public static void main(String[] args)
             throws IOException {
         if (args.length != 1) {
@@ -74,9 +76,6 @@ public class GatewayImplementation implements GatewayCallback {
         interactionValues.put("doubleValue", parameters.get("doubleValue"));
         interactionValues.put("intValue", parameters.get("intValue"));
         interactionValues.put("stringValue", parameters.get("stringValue"));
-        if (interactionValues.values().removeIf(Objects::isNull)) {
-            log.warn("removed null parameter; remaining parameters are " + interactionValues.keySet().toString());
-        }
         
         try {
             gateway.sendInteraction(TEST_INTERACTION, interactionValues, gateway.getTimeStamp());
@@ -89,19 +88,12 @@ public class GatewayImplementation implements GatewayCallback {
     public void receiveObject(Double timeStep, String className, String instanceName, Map<String, String> attributes) {
         log.trace(String.format("receiveObject %f %s %s %s", timeStep, className, instanceName, attributes.toString()));
         
-        Map<String, String> objectValues = new HashMap<String, String>();
-        objectValues.put("sequenceNumber", attributes.get("sequenceNumber"));
-        objectValues.put("booleanValue", attributes.get("booleanValue"));
-        objectValues.put("doubleValue", attributes.get("doubleValue"));
-        objectValues.put("intValue", attributes.get("intValue"));
-        objectValues.put("stringValue", attributes.get("stringValue"));
-        if (objectValues.values().removeIf(Objects::isNull)) {
-            log.warn("removed null attribute; remaining attributes are " + objectValues.keySet().toString());
-        }
+        objectState.putAll(attributes); // attributes will not contain entries for unchanged values
+        log.info("received updated object values " + attributes.toString());
         
         try {
-            gateway.updateObject("GatewayObject", objectValues, gateway.getTimeStamp());
-            log.info(String.format("t=%f sent %s using %s", timeStep, "GatewayObject", objectValues.toString()));
+            gateway.updateObject("GatewayObject", objectState, gateway.getTimeStamp());
+            log.info(String.format("t=%f sent %s using %s", timeStep, "GatewayObject", objectState.toString()));
         } catch (FederateNotExecutionMember | ObjectNotKnown | NameNotFound | AttributeNotOwned
                 | InvalidFederationTime e) {
             throw new RuntimeException("failed to update object", e);
