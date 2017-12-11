@@ -1,8 +1,8 @@
-package gov.nist.hla.ii.config;
+package gov.nist.hla.gateway;
 
-import gov.nist.hla.ii.exception.ValueNotSet;
+import gov.nist.hla.gateway.exception.ValueNotSet;
 
-public class InjectionFederateConfig {
+public class GatewayFederateConfig {
     private String federateName = "InjectionFederate";
     
     private String federationId;

@@ -1,4 +1,4 @@
-package gov.nist.hla.ii.exception;
+package gov.nist.hla.gateway.exception;
 
 public class RTIAmbassadorException extends RuntimeException {
     public RTIAmbassadorException(String message, Throwable cause) {

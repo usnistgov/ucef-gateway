@@ -1,4 +1,4 @@
-package gov.nist.hla.ii;
+package gov.nist.hla.gateway;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,9 +22,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import gov.nist.hla.FederateAmbassador;
 import gov.nist.hla.Interaction;
 import gov.nist.hla.ObjectReflection;
-import gov.nist.hla.ii.config.InjectionFederateConfig;
-import gov.nist.hla.ii.exception.RTIAmbassadorException;
-import gov.nist.hla.ii.exception.UnsupportedServiceException;
+import gov.nist.hla.gateway.exception.RTIAmbassadorException;
+import gov.nist.hla.gateway.exception.UnsupportedServiceException;
 import hla.rti.AsynchronousDeliveryAlreadyEnabled;
 import hla.rti.AttributeHandleSet;
 import hla.rti.AttributeNotDefined;
@@ -66,10 +65,10 @@ import hla.rti.jlc.RtiFactoryFactory;
 
 /**
  * This class provides a simplified API for working with the Portico implementation of HLA. It contains public methods
- * to call the HLA object management services to inject interactions and object updates into a federation, and invokes
- * the methods in the {@link InjectionCallback} used at construction during the federate life cycle.
+ * to call the HLA object management services to send interactions and object updates into a federation, and invokes
+ * the methods in the {@link GatewayCallback} used at construction during the federate life cycle.
  * <p>
- * The injection federate has a firm life cycle. After construction and calling {@link #run}, it will join the
+ * The gateway federate has a firm life cycle. After construction and calling {@link #run}, it will join the
  * federation indicated in its configuration file. It will then block waiting for the federation to achieve both
  * the readyToPopuate and readyToRun synchronization points in the listed order. After synchronization, it will begin
  * logical time progression, which will loop until the federation sends an interaction that designates the simulation
@@ -78,8 +77,8 @@ import hla.rti.jlc.RtiFactoryFactory;
  * last logical time iteration before resignation.
  * <p>
  * This class is not thread safe. All of its public methods will throw runtime exceptions if invoked from another
- * thread. It is only safe to invoke public methods from the concrete implementation of {@link InjectionCallback} used
- * to construct the injection federate.
+ * thread. It is only safe to invoke public methods from the concrete implementation of {@link GatewayCallback} used
+ * to construct the gateway federate.
  * <p>
  * A significant number of HLA services are not exposed in the public interface. The federation management, ownership
  * management, time management, and data distribution management services are not exposed through the public API. Both
@@ -89,20 +88,20 @@ import hla.rti.jlc.RtiFactoryFactory;
  * This class has trivial support for the configuration option isLateJoiner. A federate configured to join late will
  * ignore the three synchronization points readyToPopulate, readyToRun, and readyToResign. This will cause a deadlock
  * scenario if the federate joins at t=0 before the readyToRun synchronization point has been achieved. There is no
- * distinction between the {@link InjectionCallback#initializeSelf} and {@link InjectionCallback#initializeWithPeers}
+ * distinction between the {@link GatewayCallback#initializeSelf} and {@link GatewayCallback#initializeWithPeers}
  * callbacks for a late joiner, both will be called at the same time in the life cycle (right after joining).
  * 
  * @author Thomas Roth
  */
-public class InjectionFederate {
+public class GatewayFederate {
     private static final Logger log = LogManager.getLogger();
 
     private static final String SIMULATION_END = "InteractionRoot.C2WInteractionRoot.SimulationControl.SimEnd";
     private static final String FEDERATE_JOIN = "InteractionRoot.C2WInteractionRoot.FederateJoinInteraction";
     private static final String FEDERATE_RESIGN = "InteractionRoot.C2WInteractionRoot.FederateResignInteraction";
 
-    private InjectionFederateConfig configuration;
-    private InjectionCallback injectionCallback;
+    private GatewayFederateConfig configuration;
+    private GatewayCallback callback;
     
     private RTIambassador rtiAmb;
     private FederateAmbassador fedAmb;
@@ -116,31 +115,31 @@ public class InjectionFederate {
     private double lastRequestedTime;
     
     /**
-     * Create an {@link InjectionFederateConfig} from a JSON configuration file that can be used to construct an
-     * injection federate instance.
+     * Create an {@link GatewayFederateConfig} from a JSON configuration file that can be used to construct a gateway
+     * federate instance.
      * 
      * @param filepath The absolute or relative filepath to the configuration file
-     * @return An instance of a configuration class that can be used to construct an injection federate
+     * @return An instance of a configuration class that can be used to construct an gateway federate
      * @throws IOException if the filepath cannot be parsed as valid JSON
      */
-    public static InjectionFederateConfig readConfiguration(String filepath)
+    public static GatewayFederateConfig readConfiguration(String filepath)
             throws IOException {
         log.info("reading JSON configuration file at " + filepath);
         File configFile = Paths.get(filepath).toFile();
         ObjectMapper mapper = new ObjectMapper();
-        return mapper.readValue(configFile, InjectionFederateConfig.class);
+        return mapper.readValue(configFile, GatewayFederateConfig.class);
     }
     
     /**
-     * Constructs an injection federate using the given configuration that will yield control during {@link #run} to
-     * the given {@link InjectionCallback}.
+     * Constructs a gateway federate using the given configuration that will yield control during {@link #run} to
+     * the given {@link GatewayCallback}.
      * 
      * @param configuration A configuration instance created using {@link #readConfiguration}
-     * @param injectionCallback A set of callback functions that will be invoked during {@link #run}
+     * @param callback A set of callback functions that will be invoked during {@link #run}
      */
-    public InjectionFederate(InjectionFederateConfig configuration, InjectionCallback injectionCallback) {
+    public GatewayFederate(GatewayFederateConfig configuration, GatewayCallback callback) {
         this.configuration = configuration;
-        this.injectionCallback = injectionCallback;
+        this.callback = callback;
         try {
             rtiAmb = RtiFactoryFactory.getRtiFactory().createRtiAmbassador();
         } catch (RTIinternalError e) {
@@ -151,7 +150,7 @@ public class InjectionFederate {
     }
     
     /**
-     * A blocking call that will execute the complete life cycle of the injection federate. This method will exit when
+     * A blocking call that will execute the complete life cycle of the gateway federate. This method will exit when
      * either the federation sends an interaction that represents simulation end, or {@link #requestExit} is invoked.
      * For both exit conditions, one final logical time step will be executed before this method returns control.
      */
@@ -159,7 +158,7 @@ public class InjectionFederate {
         log.trace("run");
         
         if (isRunning) {
-            throw new RuntimeException("injection federate instance already running");
+            throw new RuntimeException("gateway federate instance already running");
         }
         this.exitFlag = false;
         this.receivedSimEnd = false;
@@ -185,11 +184,11 @@ public class InjectionFederate {
             publishAndSubscribe();
             notifyOfFederationJoin();
             
-            injectionCallback.initializeSelf();
+            callback.initializeSelf();
             if (!configuration.getIsLateJoiner()) {
                 synchronize(SynchronizationPoints.ReadyToPopulate);
             }
-            injectionCallback.initializeWithPeers();
+            callback.initializeWithPeers();
             if (!configuration.getIsLateJoiner()) {
                 synchronize(SynchronizationPoints.ReadyToRun);
             }
@@ -197,7 +196,7 @@ public class InjectionFederate {
             
             while (!isExitCondition()) {
                 log.trace("run t=" + getLogicalTime());
-                injectionCallback.doTimeStep(lastRequestedTime);
+                callback.doTimeStep(lastRequestedTime);
                 advanceLogicalTime();
             }
             
@@ -209,13 +208,13 @@ public class InjectionFederate {
         } catch (FederateNotExecutionMember | TimeAdvanceAlreadyInProgress e) {
             throw new RTIAmbassadorException("unreachable code", e);
         }
-        injectionCallback.terminate();
+        callback.terminate();
         this.isRunning = false;
     }
     
     /**
      * Yield control to the RTI ambassador to handle any receive order messages in the local message queue. This call
-     * will invoke {@link InjectionCallback#receiveInteraction} and {@link InjectionCallback#receiveObject} when
+     * will invoke {@link GatewayCallback#receiveInteraction} and {@link GatewayCallback#receiveObject} when
      * there are receive order interactions and object reflections in the incoming message queue.
      * 
      * @throws FederateNotExecutionMember if invoked before {@link #run} or if connection to the federation is lost
@@ -233,7 +232,7 @@ public class InjectionFederate {
     /**
      * Object model accessor
      * 
-     * @return The object model that corresponds to this injection federate's current publications and subscriptions
+     * @return The object model that corresponds to this gateway federate's current publications and subscriptions
      */
     public ObjectModel getObjectModel() {
         return objectModel;
@@ -242,7 +241,7 @@ public class InjectionFederate {
     /**
      * Logical time accessor
      * 
-     * @return This injection federate's current logical time step
+     * @return This gateway federate's current logical time step
      */
     public double getLogicalTime() {
         return fedAmb.getLogicalTime();
@@ -251,7 +250,7 @@ public class InjectionFederate {
     /**
      * Get the lowest value timestamp that can be used to send interactions and object updates.
      * 
-     * @return A timestamp to use as a parameter for {@link #injectInteraction} and {@link #updateObject}
+     * @return A timestamp to use as a parameter for {@link #sendInteraction} and {@link #updateObject}
      */
     public double getTimeStamp() {
         return fedAmb.getLogicalTime() + configuration.getLookAhead();
@@ -259,7 +258,7 @@ public class InjectionFederate {
     
     /**
      * Check whether the local federate has begun its logical time progression loop. This method can be used in both
-     * {@link InjectionCallback#receiveInteraction} and {@link InjectionCallback#receiveObject} to distinguish between
+     * {@link GatewayCallback#receiveInteraction} and {@link GatewayCallback#receiveObject} to distinguish between
      * messages that arrive during logical time progression, and those that arrive during initialization.
      * 
      * @return True if the federation has achieved the synchronization point readyToRun
@@ -356,7 +355,7 @@ public class InjectionFederate {
      * Create and send a receive order interaction to the federation. Other federates can receive this interaction
      * during the same logical time step it is sent using an explicit call to {@link #tick}. Because the message will
      * take some time to deliver, {@link #tick} should be called multiple times in a loop until the desired receive
-     * order message has been delivered to {@link InjectionCallback#receiveInteraction}.
+     * order message has been delivered to {@link GatewayCallback#receiveInteraction}.
      * <p>
      * The behavior of this function is undefined when using a subset of the interaction's available parameters. The
      * parameters map should always contain values for every interaction parameter.
@@ -368,9 +367,9 @@ public class InjectionFederate {
      *  parameter name for the className interaction
      * @throws InteractionClassNotPublished if this federate does not publish the interaction className
      */
-    public void injectInteraction(String className, Map<String, String> parameters)
+    public void sendInteraction(String className, Map<String, String> parameters)
             throws FederateNotExecutionMember, NameNotFound, InteractionClassNotPublished {
-        log.trace("injectInteraction " + className + " " + Arrays.toString(parameters.entrySet().toArray()));
+        log.trace("sendInteraction " + className + " " + Arrays.toString(parameters.entrySet().toArray()));
         try {
             int classHandle = rtiAmb.getInteractionClassHandle(className);
             Map<String, String> modifiedParameters = addRootParameters(className, parameters);
@@ -404,9 +403,9 @@ public class InjectionFederate {
      * @throws InteractionClassNotPublished if this federate does not publish the interaction className
      * @throws InvalidFederationTime if this federate cannot send interactions to be delivered at the given timestamp
      */
-    public void injectInteraction(String className, Map<String, String> parameters, double timestamp)
+    public void sendInteraction(String className, Map<String, String> parameters, double timestamp)
             throws FederateNotExecutionMember, NameNotFound, InteractionClassNotPublished, InvalidFederationTime {
-        log.trace("injectInteraction " + className + " " + Arrays.toString(parameters.entrySet().toArray())
+        log.trace("sendInteraction " + className + " " + Arrays.toString(parameters.entrySet().toArray())
                 + " " + timestamp);
         try {
             int classHandle = rtiAmb.getInteractionClassHandle(className);
@@ -428,7 +427,7 @@ public class InjectionFederate {
      * Send a receive order update to an existing and owned object instance. Other federates can receive this update
      * during the same logical time step it is sent using an explicit call to {@link #tick}. Because the message will
      * take some time to deliver, {@link #tick} should be called multiple times in a loop until the desired receive
-     * order message has been delivered to {@link InjectionCallback#receiveObject}.
+     * order message has been delivered to {@link GatewayCallback#receiveObject}.
      * 
      * @param instanceName The object instance name returned from {@link #registerObjectInstance}
      * @param attributes A map from attribute names to string values
@@ -740,7 +739,7 @@ public class InjectionFederate {
         }
         
         try {
-            injectInteraction(FEDERATE_JOIN, parameters); // does this need a timestamp ?
+            sendInteraction(FEDERATE_JOIN, parameters); // does this need a timestamp ?
         } catch (InteractionClassNotPublished e) {
             // FEDERATE_JOIN is in the published interactions set
             throw new RTIAmbassadorException("unreachable code", e);
@@ -768,7 +767,7 @@ public class InjectionFederate {
         }
         
         try {
-            injectInteraction(FEDERATE_RESIGN, parameters); // does this need a timestamp ?
+            sendInteraction(FEDERATE_RESIGN, parameters); // does this need a timestamp ?
         } catch (InteractionClassNotPublished e) {
             // FEDERATE_RESIGN is in the published interactions set
             throw new RTIAmbassadorException("unreachable code", e);
@@ -827,7 +826,7 @@ public class InjectionFederate {
                 int classHandle = receivedInteraction.getClassHandle();
                 String interactionName = rtiAmb.getInteractionClassName(classHandle);
                 Map<String, String> parameters = convertToMap(receivedInteraction);
-                injectionCallback.receiveInteraction(lastRequestedTime, interactionName, parameters);
+                callback.receiveInteraction(lastRequestedTime, interactionName, parameters);
     
                 if (interactionName.equals(SIMULATION_END)) {
                     receivedSimEnd = true;
@@ -852,7 +851,7 @@ public class InjectionFederate {
                 String className = rtiAmb.getObjectClassName(classHandle);
                 String instanceName = receivedObjectReflection.getInstanceName();
                 Map<String, String> attributes = convertToMap(classHandle, receivedObjectReflection);
-                injectionCallback.receiveObject(lastRequestedTime, className, instanceName, attributes);
+                callback.receiveObject(lastRequestedTime, className, instanceName, attributes);
             }
         } catch (ObjectClassNotDefined | AttributeNotDefined e) {
             // classHandle retrieved from the RTI ambassador

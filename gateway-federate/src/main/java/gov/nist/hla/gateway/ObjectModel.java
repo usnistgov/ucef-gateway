@@ -1,4 +1,4 @@
-package gov.nist.hla.ii;
+package gov.nist.hla.gateway;
 
 import java.util.Collections;
 import java.util.HashMap;

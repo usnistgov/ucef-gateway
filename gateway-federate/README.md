@@ -11,7 +11,7 @@ The gateway project does not have a main method and cannot be run; it is meant t
 Bring the gateway into a new project using the following dependency:
 
     <groupId>gov.nist.hla</groupId>
-    <artifactId>interaction-injection</artifactId>
+    <artifactId>gateway-federate</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 
 ## Integrate the gateway

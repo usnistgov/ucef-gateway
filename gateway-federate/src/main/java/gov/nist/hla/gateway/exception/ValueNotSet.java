@@ -1,4 +1,4 @@
-package gov.nist.hla.ii.exception;
+package gov.nist.hla.gateway.exception;
 
 public class ValueNotSet extends RuntimeException {
     public ValueNotSet(String message) {
