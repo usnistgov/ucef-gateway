@@ -69,6 +69,7 @@ public class GatewayImplementation implements GatewayCallback {
         }
         
         Map<String, String> interactionValues = new HashMap<String, String>();
+        interactionValues.put("sequenceNumber", parameters.get("sequenceNumber"));
         interactionValues.put("booleanValue", parameters.get("booleanValue"));
         interactionValues.put("doubleValue", parameters.get("doubleValue"));
         interactionValues.put("intValue", parameters.get("intValue"));
@@ -89,6 +90,7 @@ public class GatewayImplementation implements GatewayCallback {
         log.trace(String.format("receiveObject %f %s %s %s", timeStep, className, instanceName, attributes.toString()));
         
         Map<String, String> objectValues = new HashMap<String, String>();
+        objectValues.put("sequenceNumber", attributes.get("sequenceNumber"));
         objectValues.put("booleanValue", attributes.get("booleanValue"));
         objectValues.put("doubleValue", attributes.get("doubleValue"));
         objectValues.put("intValue", attributes.get("intValue"));

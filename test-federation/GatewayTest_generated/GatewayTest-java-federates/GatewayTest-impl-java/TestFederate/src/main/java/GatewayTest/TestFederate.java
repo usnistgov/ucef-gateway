@@ -31,6 +31,9 @@ public class TestFederate extends TestFederateBase {
     double doubleValue;
     
     int intValue;
+    int sequenceNumber = 0;
+    int lastInteraction = 0;
+    int lastObjectUpdate = 0;
     
     String stringValue;
 
@@ -40,7 +43,7 @@ public class TestFederate extends TestFederateBase {
     }
 
     private void CheckReceivedSubscriptions(String s) {
-
+        
         InteractionRoot interaction = null;
         while ((interaction = getNextInteractionNoWait()) != null) {
             if (interaction instanceof TestInteraction) {
@@ -97,26 +100,10 @@ public class TestFederate extends TestFederateBase {
             
             CheckReceivedSubscriptions("Main Loop");
             
-            booleanValue = ThreadLocalRandom.current().nextBoolean();
-            doubleValue = ThreadLocalRandom.current().nextDouble(1000);
-            intValue = ThreadLocalRandom.current().nextInt(10000);
-            stringValue = generateStringValue();
+            if (lastInteraction == sequenceNumber) { // && lastObjectUpdate == sequenceNumber) {
+                sendNextValues();
+            }
             
-            TestInteraction testInteraction = create_TestInteraction();
-            testInteraction.set_booleanValue(booleanValue);
-            testInteraction.set_doubleValue(doubleValue);
-            testInteraction.set_intValue(intValue);
-            testInteraction.set_stringValue(stringValue);
-            testInteraction.sendInteraction(getLRC(), currentTime + super.getLookAhead());
-            log.info("sent " + testInteraction.toString());
-            
-            testObjectInstance.set_booleanValue(booleanValue);
-            testObjectInstance.set_doubleValue(doubleValue);
-            testObjectInstance.set_intValue(intValue);
-            testObjectInstance.set_stringValue(stringValue);
-            testObjectInstance.updateAttributeValues(getLRC(), currentTime + super.getLookAhead());
-            log.info("sent " + testObjectInstance.toString());
-
             currentTime += super.getStepSize();
             AdvanceTimeRequest newATR = new AdvanceTimeRequest(currentTime);
             putAdvanceTimeRequest(newATR);
@@ -134,10 +121,12 @@ public class TestFederate extends TestFederateBase {
 
     private void handleInteractionClass(TestInteraction interaction) {
         log.info("received TestInteraction");
+        checkSequenceNumber(interaction.get_sequenceNumber());
         checkBooleanValue(interaction.get_booleanValue());
         checkDoubleValue(interaction.get_doubleValue());
         checkIntValue(interaction.get_intValue());
         checkStringValue(interaction.get_stringValue());
+        lastInteraction = interaction.get_sequenceNumber();
         
         // see what happens to the value when the parameter handles don't match
         log.debug("sourceFed received as " + interaction.get_sourceFed());
@@ -145,10 +134,12 @@ public class TestFederate extends TestFederateBase {
 
     private void handleObjectClass(TestObject object) {
         log.info("received TestObject reflection");
+        checkSequenceNumber(object.get_sequenceNumber());
         checkBooleanValue(object.get_booleanValue());
         checkDoubleValue(object.get_doubleValue());
         checkIntValue(object.get_intValue());
         checkStringValue(object.get_stringValue());
+        lastObjectUpdate = object.get_sequenceNumber();
     }
     
     private String generateStringValue() {
@@ -159,9 +150,35 @@ public class TestFederate extends TestFederateBase {
         return buffer.toString();
     }
     
+    private void sendNextValues()
+            throws Exception {
+        booleanValue = ThreadLocalRandom.current().nextBoolean();
+        doubleValue = ThreadLocalRandom.current().nextDouble(1000);
+        intValue = ThreadLocalRandom.current().nextInt(10000);
+        stringValue = generateStringValue();
+        sequenceNumber = sequenceNumber + 1;
+        
+        TestInteraction testInteraction = create_TestInteraction();
+        testInteraction.set_sequenceNumber(sequenceNumber);
+        testInteraction.set_booleanValue(booleanValue);
+        testInteraction.set_doubleValue(doubleValue);
+        testInteraction.set_intValue(intValue);
+        testInteraction.set_stringValue(stringValue);
+        testInteraction.sendInteraction(getLRC(), currentTime + super.getLookAhead());
+        log.info("sent " + testInteraction.toString());
+        
+        testObjectInstance.set_sequenceNumber(sequenceNumber);
+        testObjectInstance.set_booleanValue(booleanValue);
+        testObjectInstance.set_doubleValue(doubleValue);
+        testObjectInstance.set_intValue(intValue);
+        testObjectInstance.set_stringValue(stringValue);
+        testObjectInstance.updateAttributeValues(getLRC(), currentTime + super.getLookAhead());
+        log.info("sent " + testObjectInstance.toString());
+    }
+    
     private void checkBooleanValue(boolean value) {
-        log.info("\treceived " + value);
-        log.info("\texpected " + booleanValue);
+        log.info("\treceived boolean " + value);
+        log.info("\texpected boolean " + booleanValue);
         if (value != booleanValue) {
             log.error("FAILED - boolean value incorrect");
             //throw new RuntimeException("boolean value incorrect");
@@ -169,8 +186,8 @@ public class TestFederate extends TestFederateBase {
     }
     
     private void checkDoubleValue(double value) {
-        log.info("\treceived " + value);
-        log.info("\texpected " + doubleValue);
+        log.info("\treceived double " + value);
+        log.info("\texpected double " + doubleValue);
         if (value != doubleValue) {
             log.error("FAILED - double value incorrect");
             //throw new RuntimeException("double value incorrect");
@@ -178,8 +195,8 @@ public class TestFederate extends TestFederateBase {
     }
     
     private void checkIntValue(int value) {
-        log.info("\treceived " + value);
-        log.info("\texpected " + intValue);
+        log.info("\treceived int " + value);
+        log.info("\texpected int " + intValue);
         if (value != intValue) {
             log.error("FAILED - int value incorrect");
             //throw new RuntimeException("int value incorrect");
@@ -187,11 +204,20 @@ public class TestFederate extends TestFederateBase {
     }
 
     private void checkStringValue(String value) {
-        log.info(String.format("\treceived %s (%d)", value, value.length()));
-        log.info(String.format("\texpected %s (%d)", stringValue, stringValue.length()));
+        log.info(String.format("\treceived string %s (%d)", value, value.length()));
+        log.info(String.format("\texpected string %s (%d)", stringValue, stringValue.length()));
         if (!value.equals(stringValue)) {
             log.error("FAILED - string value incorrect");
             //throw new RuntimeException("string value incorrect");
+        }
+    }
+    
+    private void checkSequenceNumber(int value) {
+        log.info("\treceived sequence number " + value);
+        log.info("\texpected sequence number " + sequenceNumber);
+        if (value != sequenceNumber) {
+            log.error("FAILED - sequence number incorrect");
+            //throw new RuntimeException("sequence number incorrect");
         }
     }
 
