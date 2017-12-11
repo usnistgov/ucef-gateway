@@ -79,7 +79,7 @@ public class GatewayImplementation implements GatewayCallback {
         }
         
         try {
-            gateway.injectInteraction(TEST_INTERACTION, interactionValues, gateway.getTimeStamp());
+            gateway.sendInteraction(TEST_INTERACTION, interactionValues, gateway.getTimeStamp());
             log.info(String.format("t=%f sent %s using %s", timeStep, TEST_INTERACTION, interactionValues.toString()));
         } catch (FederateNotExecutionMember | NameNotFound | InteractionClassNotPublished | InvalidFederationTime e) {
             throw new RuntimeException("failed to send interaction", e);

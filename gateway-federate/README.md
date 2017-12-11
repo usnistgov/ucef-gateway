@@ -1,4 +1,4 @@
-The UCEF Gateway project is meant to be used as the basis for the implementation of an HLA federate. The gateway is designed to expose the minimal set of HLA features required to implement a federate that can translate between HLA messages and another communication protocol. It exposes three significant classes which are each documented using javadocs: InjectionFederate, InjectionCallback, and ObjectModel.
+The UCEF Gateway project is meant to be used as the basis for the implementation of an HLA federate. The gateway is designed to expose the minimal set of HLA features required to implement a federate that can translate between HLA messages and another communication protocol. It exposes three significant classes which are each documented using javadocs: GatewayFederate, GatewayCallback, and ObjectModel.
 
 The gateway **does not support** the Save and Restore federation management services and the Ownership Management services. **It cannot join a federation that enables these services** as it will throw an exception.
 
@@ -18,10 +18,10 @@ Bring the gateway into a new project using the following dependency:
 
 Integrate the gateway into a new project with the following two steps:
 
-1. Create a new instance of the `InjectionFederate` class
-1. Execute the gateway code using the blocking `InjectionFederate::run` method
+1. Create a new instance of the `GatewayFederate` class
+1. Execute the gateway code using the blocking `GatewayFederate::run` method
 
-The `InjectionFederate` constructor requires a configuration file and an implementation of the `InjectionCallback` interface. Use the `InjectionFederate::readConfiguration(String)` static method to create the configuration file. More information on the callback interface is documented below.
+The `GatewayFederate` constructor requires a configuration file and an implementation of the `GatewayCallback` interface. Use the `GatewayFederate::readConfiguration(String)` static method to create the configuration file. More information on the callback interface is documented below.
 
 **The gateway project is not thread safe**. Its behavior is undefined in a threaded environment.
 
@@ -50,13 +50,13 @@ The most relevant fields in the FOM for the gateway are `<interactions>` and `<o
 
 Refer to the javadocs or the method comments for more information.
 
-## InjectionFederate
+## GatewayFederate
 
 The front end of the gateway project. It provides public methods to publish interactions and object updates, as well as the blocking run method which performs the full federate life cycle.
 
-## InjectionCallback
+## GatewayCallback
 
-An interface that defines a set of callback methods which will be invoked during the federate life cycle primarily concerned with receiving interactions and object updates. You must implement this interface and pass the implementation to the InjectionFederate constructor. Almost all implementations should maintain a reference to the InjectionFederate to enable the callbacks to invoke the publish data methods.
+An interface that defines a set of callback methods which will be invoked during the federate life cycle primarily concerned with receiving interactions and object updates. You must implement this interface and pass the implementation to the GatewayFederate constructor. Almost all implementations should maintain a reference to the GatewayFederate to enable the callbacks to invoke the publish data methods.
 
 ## ObjectModel
 
