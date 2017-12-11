@@ -9,7 +9,7 @@
   "port": 8083,
   "controlEndpoint": "/fedmgr",
   "federatesEndpoint": "/federates",
-  "federationEndTime": 20,
+  "federationEndTime": 0,
   "realTimeMode": true,
   "fedFile": "fom/GatewayTest.fed",
   "experimentConfig": "conf/experimentConfig.json"
