@@ -6,7 +6,7 @@
   <packaging>pom</packaging>
   <modules>
   	<module>fom2emf</module>
-  	<module>interaction-injection</module>
+  	<module>gateway-federate</module>
   	<module>sds4emf</module>
   </modules>
 </project>
