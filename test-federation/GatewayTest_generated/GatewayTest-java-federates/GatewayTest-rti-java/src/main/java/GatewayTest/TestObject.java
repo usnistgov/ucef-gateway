@@ -32,6 +32,7 @@ public class TestObject extends ObjectRoot {
 	private static int _booleanValue_handle;
 	private static int _doubleValue_handle;
 	private static int _intValue_handle;
+	private static int _sequenceNumber_handle;
 	private static int _stringValue_handle;
 	
 	
@@ -58,6 +59,14 @@ public class TestObject extends ObjectRoot {
 	* @return the handle (RTI assigned) of the "intValue" attribute
 	*/
 	public static int get_intValue_handle() { return _intValue_handle; }
+	
+	/**
+	* Returns the handle (RTI assigned) of the "sequenceNumber" attribute of
+	* its containing object class.
+	*
+	* @return the handle (RTI assigned) of the "sequenceNumber" attribute
+	*/
+	public static int get_sequenceNumber_handle() { return _sequenceNumber_handle; }
 	
 	/**
 	* Returns the handle (RTI assigned) of the "stringValue" attribute of
@@ -150,18 +159,21 @@ public class TestObject extends ObjectRoot {
 		_datamemberNames.add("booleanValue");
 		_datamemberNames.add("doubleValue");
 		_datamemberNames.add("intValue");
+		_datamemberNames.add("sequenceNumber");
 		_datamemberNames.add("stringValue");
 		
 		
 		_allDatamemberNames.add("booleanValue");
 		_allDatamemberNames.add("doubleValue");
 		_allDatamemberNames.add("intValue");
+		_allDatamemberNames.add("sequenceNumber");
 		_allDatamemberNames.add("stringValue");
 		
 		
 		_datamemberTypeMap.put("booleanValue", "boolean");
 		_datamemberTypeMap.put("doubleValue", "double");
 		_datamemberTypeMap.put("intValue", "int");
+		_datamemberTypeMap.put("sequenceNumber", "int");
 		_datamemberTypeMap.put("stringValue", "String");
 	
 
@@ -215,6 +227,7 @@ public class TestObject extends ObjectRoot {
 				_booleanValue_handle = rti.getAttributeHandle("booleanValue", get_handle());			
 				_doubleValue_handle = rti.getAttributeHandle("doubleValue", get_handle());			
 				_intValue_handle = rti.getAttributeHandle("intValue", get_handle());			
+				_sequenceNumber_handle = rti.getAttributeHandle("sequenceNumber", get_handle());			
 				_stringValue_handle = rti.getAttributeHandle("stringValue", get_handle());
 				isNotInitialized = false;
 			} catch (FederateNotExecutionMember f) {
@@ -239,12 +252,14 @@ public class TestObject extends ObjectRoot {
 		_datamemberNameHandleMap.put("ObjectRoot.TestObject,booleanValue", get_booleanValue_handle());
 		_datamemberNameHandleMap.put("ObjectRoot.TestObject,doubleValue", get_doubleValue_handle());
 		_datamemberNameHandleMap.put("ObjectRoot.TestObject,intValue", get_intValue_handle());
+		_datamemberNameHandleMap.put("ObjectRoot.TestObject,sequenceNumber", get_sequenceNumber_handle());
 		_datamemberNameHandleMap.put("ObjectRoot.TestObject,stringValue", get_stringValue_handle());
 			
 			
 		_datamemberHandleNameMap.put(get_booleanValue_handle(), "booleanValue");
 		_datamemberHandleNameMap.put(get_doubleValue_handle(), "doubleValue");
 		_datamemberHandleNameMap.put(get_intValue_handle(), "intValue");
+		_datamemberHandleNameMap.put(get_sequenceNumber_handle(), "sequenceNumber");
 		_datamemberHandleNameMap.put(get_stringValue_handle(), "stringValue");
 		
 	}
@@ -517,6 +532,7 @@ public class TestObject extends ObjectRoot {
 			+ "booleanValue:" + get_booleanValue()
 			+ "," + "doubleValue:" + get_doubleValue()
 			+ "," + "intValue:" + get_intValue()
+			+ "," + "sequenceNumber:" + get_sequenceNumber()
 			+ "," + "stringValue:" + get_stringValue()
 			+ ")";
 	}
@@ -674,6 +690,55 @@ public class TestObject extends ObjectRoot {
 	
 	
 	/**
+	* Publishes the "sequenceNumber" attribute of the attribute's containing object
+	* class for a federate.
+	* Note:  This method only marks the "sequenceNumber" attribute for publication.
+	* To actually publish the attribute, the federate must (re)publish its containing
+	* object class.
+	* (using <objectClassName>.publish( RTIambassador rti ) ).
+	*/
+	public static void publish_sequenceNumber() {
+		_publishAttributeNameSet.add( "sequenceNumber" );
+	}
+
+	/**
+	* Unpublishes the "sequenceNumber" attribute of the attribute's containing object
+	* class for a federate.
+	* Note:  This method only marks the "sequenceNumber" attribute for unpublication.
+	* To actually publish the attribute, the federate must (re)publish its containing
+	* object class.
+	* (using <objectClassName>.publish( RTIambassador rti ) ).
+	*/
+	public static void unpublish_sequenceNumber() {
+		_publishAttributeNameSet.remove( "sequenceNumber" );
+	}
+	
+	/**
+	* Subscribes a federate to the "sequenceNumber" attribute of the attribute's
+	* containing object class.
+	* Note:  This method only marks the "sequenceNumber" attribute for subscription.
+	* To actually subscribe to the attribute, the federate must (re)subscribe to its
+	* containing object class.
+	* (using <objectClassName>.subscribe( RTIambassador rti ) ).
+	*/
+	public static void subscribe_sequenceNumber() {
+		_subscribeAttributeNameSet.add( "sequenceNumber" );
+	}
+
+	/**
+	* Unsubscribes a federate from the "sequenceNumber" attribute of the attribute's
+	* containing object class.
+	* Note:  This method only marks the "sequenceNumber" attribute for unsubscription.
+	* To actually unsubscribe to the attribute, the federate must (re)subscribe to its
+	* containing object class.
+	* (using <objectClassName>.subscribe( RTIambassador rti ) ).
+	*/
+	public static void unsubscribe_sequenceNumber() {
+		_subscribeAttributeNameSet.remove( "sequenceNumber" );
+	}
+	
+	
+	/**
 	* Publishes the "stringValue" attribute of the attribute's containing object
 	* class for a federate.
 	* Note:  This method only marks the "stringValue" attribute for publication.
@@ -820,6 +885,38 @@ public class TestObject extends ObjectRoot {
 	}
 	
 	
+	private Attribute< Integer > _sequenceNumber =
+ 		new Attribute< Integer >(  new Integer( 0 )  );
+	
+	/**
+	* Set the value of the "sequenceNumber" attribute to "value" for this object.
+	*
+	* @param value the new value for the "sequenceNumber" attribute
+	*/
+	public void set_sequenceNumber( int value ) {
+		_sequenceNumber.setValue( value );
+		_sequenceNumber.setTime( getTime() );
+	}
+	
+	/**
+	* Returns the value of the "sequenceNumber" attribute of this object.
+	*
+	* @return the value of the "sequenceNumber" attribute
+	*/
+	public int get_sequenceNumber() {
+		return _sequenceNumber.getValue();
+	}
+	
+	/**
+	* Returns the current timestamp of the "sequenceNumber" attribute of this object.
+	* 
+	* @return the current timestamp of the "sequenceNumber" attribute
+	*/
+	public double get_sequenceNumber_time() {
+		return _sequenceNumber.getTime();
+	}
+	
+	
 	private Attribute< String > _stringValue =
  		new Attribute< String >(  new String( "" )  );
 	
@@ -906,6 +1003,7 @@ public class TestObject extends ObjectRoot {
 		set_booleanValue( TestObject_var.get_booleanValue() );
 		set_doubleValue( TestObject_var.get_doubleValue() );
 		set_intValue( TestObject_var.get_intValue() );
+		set_sequenceNumber( TestObject_var.get_sequenceNumber() );
 		set_stringValue( TestObject_var.get_stringValue() );
 	}
 
@@ -926,6 +1024,7 @@ public class TestObject extends ObjectRoot {
 		if (  "booleanValue".equals( datamemberName )  ) return new Boolean(get_booleanValue());
 		else if (  "doubleValue".equals( datamemberName )  ) return new Double(get_doubleValue());
 		else if (  "intValue".equals( datamemberName )  ) return new Integer(get_intValue());
+		else if (  "sequenceNumber".equals( datamemberName )  ) return new Integer(get_sequenceNumber());
 		else if (  "stringValue".equals( datamemberName )  ) return get_stringValue();
 		else return super.getAttribute( datamemberName );
 	}
@@ -946,6 +1045,7 @@ public class TestObject extends ObjectRoot {
 		if ( get_booleanValue_handle() == datamemberHandle ) return new Boolean(get_booleanValue());
 		else if ( get_doubleValue_handle() == datamemberHandle ) return new Double(get_doubleValue());
 		else if ( get_intValue_handle() == datamemberHandle ) return new Integer(get_intValue());
+		else if ( get_sequenceNumber_handle() == datamemberHandle ) return new Integer(get_sequenceNumber());
 		else if ( get_stringValue_handle() == datamemberHandle ) return get_stringValue();
 		else return super.getAttribute( datamemberHandle );
 	}
@@ -958,6 +1058,7 @@ public class TestObject extends ObjectRoot {
 		if ( param_handle == get_booleanValue_handle() ) set_booleanValue( Boolean.parseBoolean(val) );
 		else if ( param_handle == get_doubleValue_handle() ) set_doubleValue( Double.parseDouble(val) );
 		else if ( param_handle == get_intValue_handle() ) set_intValue( Integer.parseInt(val) );
+		else if ( param_handle == get_sequenceNumber_handle() ) set_sequenceNumber( Integer.parseInt(val) );
 		else if ( param_handle == get_stringValue_handle() ) set_stringValue( val );
 		else retval = super.setAttributeAux( param_handle, val );
 		
@@ -972,6 +1073,7 @@ public class TestObject extends ObjectRoot {
 		if (  "booleanValue".equals( datamemberName )  ) set_booleanValue( Boolean.parseBoolean(val) );
 		else if (  "doubleValue".equals( datamemberName )  ) set_doubleValue( Double.parseDouble(val) );
 		else if (  "intValue".equals( datamemberName )  ) set_intValue( Integer.parseInt(val) );
+		else if (  "sequenceNumber".equals( datamemberName )  ) set_sequenceNumber( Integer.parseInt(val) );
 		else if (  "stringValue".equals( datamemberName )  ) set_stringValue( val );	
 		else retval = super.setAttributeAux( datamemberName, val );
 		
@@ -986,6 +1088,7 @@ public class TestObject extends ObjectRoot {
 		if (  "booleanValue".equals( datamemberName )  ) set_booleanValue( (Boolean)val );
 		else if (  "doubleValue".equals( datamemberName )  ) set_doubleValue( (Double)val );
 		else if (  "intValue".equals( datamemberName )  ) set_intValue( (Integer)val );
+		else if (  "sequenceNumber".equals( datamemberName )  ) set_sequenceNumber( (Integer)val );
 		else if (  "stringValue".equals( datamemberName )  ) set_stringValue( (String)val );		
 		else retval = super.setAttributeAux( datamemberName, val );
 		
@@ -1030,6 +1133,16 @@ public class TestObject extends ObjectRoot {
 				_intValue.setHasBeenUpdated();
 			}
 			try {
+				isPublished = _publishedAttributeHandleSet.isMember( get_sequenceNumber_handle() );
+			} catch ( Exception e ) {
+				logger.error("ERROR:  ObjectRoot.TestObject.createSuppliedAttributes:  could not determine if sequenceNumber is published.");
+				isPublished = false;
+			}
+			if (  isPublished && _sequenceNumber.shouldBeUpdated( force )  ) {
+				datamembers.add( get_sequenceNumber_handle(), Integer.toString(get_sequenceNumber()).getBytes() );
+				_sequenceNumber.setHasBeenUpdated();
+			}
+			try {
 				isPublished = _publishedAttributeHandleSet.isMember( get_stringValue_handle() );
 			} catch ( Exception e ) {
 				logger.error("ERROR:  ObjectRoot.TestObject.createSuppliedAttributes:  could not determine if stringValue is published.");
@@ -1053,6 +1166,7 @@ public class TestObject extends ObjectRoot {
 				_booleanValue = data._booleanValue;
 				_doubleValue = data._doubleValue;
 				_intValue = data._intValue;
+				_sequenceNumber = data._sequenceNumber;
 				_stringValue = data._stringValue;
 			
 		}

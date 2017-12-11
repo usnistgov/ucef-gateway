@@ -1,6 +1,6 @@
 {
   "__OBJECTS__": {
-    "0cfd9556-27b9-411c-aa28-d46278edf81f": {
+    "f942957b-605c-433f-aabb-08debdb61761": {
       "attributes": {
         "name": "TestFederate",
         "TimeRegulating": "true",
@@ -19,20 +19,20 @@
       "parameters": [],
       "inputs": [
         {
-          "GUID": "c8cb90b1-9700-40ba-9fba-3293496840d5"
+          "GUID": "76d71660-5ffa-450b-8ccf-6071a9ed9a97"
         }
       ],
       "outputs": [
         {
-          "GUID": "c8cb90b1-9700-40ba-9fba-3293496840d5"
+          "GUID": "76d71660-5ffa-450b-8ccf-6071a9ed9a97"
         }
       ],
       "RegistryInfo": "",
       "documentation": "No documentation exists yet.",
       "repository": "No repository exists yet.",
-      "GUID": "0cfd9556-27b9-411c-aa28-d46278edf81f"
+      "GUID": "f942957b-605c-433f-aabb-08debdb61761"
     },
-    "e1af2af7-02e9-40e0-a4e6-ab927016c6b2": {
+    "f0b57a40-5540-442f-8b20-77660307e74e": {
       "attributes": {
         "name": "InteractionRoot",
         "Order": "timestamp",
@@ -41,12 +41,12 @@
         "Delivery": "reliable"
       },
       "__INTERACTION_BASE__": {
-        "GUID": "d26f7411-25fe-4cec-a79a-7af2b8bda5a3"
+        "GUID": "8a98f407-a3c5-4075-884c-6517eec0d904"
       },
       "parameters": [],
-      "GUID": "e1af2af7-02e9-40e0-a4e6-ab927016c6b2"
+      "GUID": "f0b57a40-5540-442f-8b20-77660307e74e"
     },
-    "96d2dca3-a257-4378-b48b-23683392e8da": {
+    "510391bc-2b48-4189-968f-ec19308eb4c2": {
       "attributes": {
         "name": "C2WInteractionRoot",
         "Order": "timestamp",
@@ -55,7 +55,7 @@
         "Delivery": "reliable"
       },
       "__INTERACTION_BASE__": {
-        "GUID": "e1af2af7-02e9-40e0-a4e6-ab927016c6b2"
+        "GUID": "f0b57a40-5540-442f-8b20-77660307e74e"
       },
       "parameters": [
         {
@@ -79,9 +79,9 @@
           "Hidden": "false"
         }
       ],
-      "GUID": "96d2dca3-a257-4378-b48b-23683392e8da"
+      "GUID": "510391bc-2b48-4189-968f-ec19308eb4c2"
     },
-    "c8cb90b1-9700-40ba-9fba-3293496840d5": {
+    "76d71660-5ffa-450b-8ccf-6071a9ed9a97": {
       "attributes": {
         "name": "TestInteraction",
         "Order": "timestamp",
@@ -90,7 +90,7 @@
         "Delivery": "reliable"
       },
       "__INTERACTION_BASE__": {
-        "GUID": "96d2dca3-a257-4378-b48b-23683392e8da"
+        "GUID": "510391bc-2b48-4189-968f-ec19308eb4c2"
       },
       "parameters": [
         {
@@ -101,11 +101,6 @@
         {
           "name": "sourceFed",
           "ParameterType": "String",
-          "Hidden": "false"
-        },
-        {
-          "name": "intValue",
-          "ParameterType": "int",
           "Hidden": "false"
         },
         {
@@ -124,6 +119,16 @@
           "Hidden": "false"
         },
         {
+          "name": "sequenceNumber",
+          "ParameterType": "int",
+          "Hidden": "false"
+        },
+        {
+          "name": "intValue",
+          "ParameterType": "int",
+          "Hidden": "false"
+        },
+        {
           "name": "actualLogicalGenerationTime",
           "ParameterType": "double",
           "Hidden": "false"
@@ -134,24 +139,24 @@
           "Hidden": "false"
         }
       ],
-      "GUID": "c8cb90b1-9700-40ba-9fba-3293496840d5"
+      "GUID": "76d71660-5ffa-450b-8ccf-6071a9ed9a97"
     }
   },
   "__ROOT_OBJECT__": {
-    "GUID": "0cfd9556-27b9-411c-aa28-d46278edf81f",
+    "GUID": "f942957b-605c-433f-aabb-08debdb61761",
     "name": "TestFederate",
     "version": "0.0.1",
     "description": ""
   },
   "Federates": {
-    "0cfd9556-27b9-411c-aa28-d46278edf81f": ""
+    "f942957b-605c-433f-aabb-08debdb61761": ""
   },
   "COAs": {},
   "Experiments": {},
   "Interactions": {
-    "e1af2af7-02e9-40e0-a4e6-ab927016c6b2": "",
-    "96d2dca3-a257-4378-b48b-23683392e8da": "",
-    "c8cb90b1-9700-40ba-9fba-3293496840d5": ""
+    "f0b57a40-5540-442f-8b20-77660307e74e": "",
+    "510391bc-2b48-4189-968f-ec19308eb4c2": "",
+    "76d71660-5ffa-450b-8ccf-6071a9ed9a97": ""
   },
   "Repositories": [],
   "Builds": [],

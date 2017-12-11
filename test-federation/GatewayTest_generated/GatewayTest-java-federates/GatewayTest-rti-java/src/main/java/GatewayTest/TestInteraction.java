@@ -32,6 +32,7 @@ public class TestInteraction extends C2WInteractionRoot {
 	private static int _booleanValue_handle;
 	private static int _doubleValue_handle;
 	private static int _intValue_handle;
+	private static int _sequenceNumber_handle;
 	private static int _stringValue_handle;
 	
 	
@@ -58,6 +59,14 @@ public class TestInteraction extends C2WInteractionRoot {
 	* @return the handle (RTI assigned) of the "intValue" parameter
 	*/
 	public static int get_intValue_handle() { return _intValue_handle; }
+	
+	/**
+	* Returns the handle (RTI assigned) of the "sequenceNumber" parameter of
+	* its containing interaction class.
+	*
+	* @return the handle (RTI assigned) of the "sequenceNumber" parameter
+	*/
+	public static int get_sequenceNumber_handle() { return _sequenceNumber_handle; }
 	
 	/**
 	* Returns the handle (RTI assigned) of the "stringValue" parameter of
@@ -146,6 +155,7 @@ public class TestInteraction extends C2WInteractionRoot {
 		
 		_datamemberNames.add("intValue");
 		
+		_datamemberNames.add("sequenceNumber");
 		
 		_datamemberNames.add("stringValue");
 		
@@ -156,6 +166,7 @@ public class TestInteraction extends C2WInteractionRoot {
 		_allDatamemberNames.add("federateFilter");
 		_allDatamemberNames.add("intValue");
 		_allDatamemberNames.add("originFed");
+		_allDatamemberNames.add("sequenceNumber");
 		_allDatamemberNames.add("sourceFed");
 		_allDatamemberNames.add("stringValue");
 		
@@ -163,6 +174,7 @@ public class TestInteraction extends C2WInteractionRoot {
 		_datamemberTypeMap.put("booleanValue", "boolean");
 		_datamemberTypeMap.put("doubleValue", "double");
 		_datamemberTypeMap.put("intValue", "int");
+		_datamemberTypeMap.put("sequenceNumber", "int");
 		_datamemberTypeMap.put("stringValue", "String");
 	
 	
@@ -208,6 +220,7 @@ public class TestInteraction extends C2WInteractionRoot {
 				_booleanValue_handle = rti.getParameterHandle("booleanValue", get_handle());			
 				_doubleValue_handle = rti.getParameterHandle("doubleValue", get_handle());			
 				_intValue_handle = rti.getParameterHandle("intValue", get_handle());			
+				_sequenceNumber_handle = rti.getParameterHandle("sequenceNumber", get_handle());			
 				_stringValue_handle = rti.getParameterHandle("stringValue", get_handle());
 				isNotInitialized = false;
 			} catch (FederateNotExecutionMember f) {
@@ -232,12 +245,14 @@ public class TestInteraction extends C2WInteractionRoot {
 		_datamemberNameHandleMap.put("InteractionRoot.C2WInteractionRoot.TestInteraction,booleanValue", get_booleanValue_handle());
 		_datamemberNameHandleMap.put("InteractionRoot.C2WInteractionRoot.TestInteraction,doubleValue", get_doubleValue_handle());
 		_datamemberNameHandleMap.put("InteractionRoot.C2WInteractionRoot.TestInteraction,intValue", get_intValue_handle());
+		_datamemberNameHandleMap.put("InteractionRoot.C2WInteractionRoot.TestInteraction,sequenceNumber", get_sequenceNumber_handle());
 		_datamemberNameHandleMap.put("InteractionRoot.C2WInteractionRoot.TestInteraction,stringValue", get_stringValue_handle());
 			
 			
 		_datamemberHandleNameMap.put(get_booleanValue_handle(), "booleanValue");
 		_datamemberHandleNameMap.put(get_doubleValue_handle(), "doubleValue");
 		_datamemberHandleNameMap.put(get_intValue_handle(), "intValue");
+		_datamemberHandleNameMap.put(get_sequenceNumber_handle(), "sequenceNumber");
 		_datamemberHandleNameMap.put(get_stringValue_handle(), "stringValue");
 		
 	}
@@ -482,6 +497,7 @@ public class TestInteraction extends C2WInteractionRoot {
 			+ "booleanValue:" + get_booleanValue()
 			+ "," + "doubleValue:" + get_doubleValue()
 			+ "," + "intValue:" + get_intValue()
+			+ "," + "sequenceNumber:" + get_sequenceNumber()
 			+ "," + "stringValue:" + get_stringValue()
 			+ ")";
 	}
@@ -496,6 +512,8 @@ public class TestInteraction extends C2WInteractionRoot {
 	private double _doubleValue = 0;
 	
 	private int _intValue = 0;
+	
+	private int _sequenceNumber = 0;
 	
 	private String _stringValue = "";
 
@@ -544,6 +562,21 @@ public class TestInteraction extends C2WInteractionRoot {
 	* @return the value of the "intValue" parameter
 	*/
 	public int get_intValue() { return _intValue; }
+	
+	
+	/**
+	* Set the value of the "sequenceNumber" parameter to "value" for this parameter.
+	*
+	* @param value the new value for the "sequenceNumber" parameter
+	*/
+	public void set_sequenceNumber( int value ) { _sequenceNumber = value; }
+	
+	/**
+	* Returns the value of the "sequenceNumber" parameter of this interaction.
+	*
+	* @return the value of the "sequenceNumber" parameter
+	*/
+	public int get_sequenceNumber() { return _sequenceNumber; }
 	
 	
 	/**
@@ -615,6 +648,7 @@ public class TestInteraction extends C2WInteractionRoot {
 		set_booleanValue( TestInteraction_var.get_booleanValue() );
 		set_doubleValue( TestInteraction_var.get_doubleValue() );
 		set_intValue( TestInteraction_var.get_intValue() );
+		set_sequenceNumber( TestInteraction_var.get_sequenceNumber() );
 		set_stringValue( TestInteraction_var.get_stringValue() );
 	}
 
@@ -635,6 +669,7 @@ public class TestInteraction extends C2WInteractionRoot {
 		if (  "booleanValue".equals( datamemberName )  ) return new Boolean(get_booleanValue());
 		else if (  "doubleValue".equals( datamemberName )  ) return new Double(get_doubleValue());
 		else if (  "intValue".equals( datamemberName )  ) return new Integer(get_intValue());
+		else if (  "sequenceNumber".equals( datamemberName )  ) return new Integer(get_sequenceNumber());
 		else if (  "stringValue".equals( datamemberName )  ) return get_stringValue();
 		else return super.getParameter( datamemberName );
 	}
@@ -655,6 +690,7 @@ public class TestInteraction extends C2WInteractionRoot {
 		if ( get_booleanValue_handle() == datamemberHandle ) return new Boolean(get_booleanValue());
 		else if ( get_doubleValue_handle() == datamemberHandle ) return new Double(get_doubleValue());
 		else if ( get_intValue_handle() == datamemberHandle ) return new Integer(get_intValue());
+		else if ( get_sequenceNumber_handle() == datamemberHandle ) return new Integer(get_sequenceNumber());
 		else if ( get_stringValue_handle() == datamemberHandle ) return get_stringValue();
 		else return super.getParameter( datamemberHandle );
 	}
@@ -667,6 +703,7 @@ public class TestInteraction extends C2WInteractionRoot {
 		if ( param_handle == get_booleanValue_handle() ) set_booleanValue( Boolean.parseBoolean(val) );
 		else if ( param_handle == get_doubleValue_handle() ) set_doubleValue( Double.parseDouble(val) );
 		else if ( param_handle == get_intValue_handle() ) set_intValue( Integer.parseInt(val) );
+		else if ( param_handle == get_sequenceNumber_handle() ) set_sequenceNumber( Integer.parseInt(val) );
 		else if ( param_handle == get_stringValue_handle() ) set_stringValue( val );
 		else retval = super.setParameterAux( param_handle, val );
 		
@@ -681,6 +718,7 @@ public class TestInteraction extends C2WInteractionRoot {
 		if (  "booleanValue".equals( datamemberName )  ) set_booleanValue( Boolean.parseBoolean(val) );
 		else if (  "doubleValue".equals( datamemberName )  ) set_doubleValue( Double.parseDouble(val) );
 		else if (  "intValue".equals( datamemberName )  ) set_intValue( Integer.parseInt(val) );
+		else if (  "sequenceNumber".equals( datamemberName )  ) set_sequenceNumber( Integer.parseInt(val) );
 		else if (  "stringValue".equals( datamemberName )  ) set_stringValue( val );	
 		else retval = super.setParameterAux( datamemberName, val );
 		
@@ -695,6 +733,7 @@ public class TestInteraction extends C2WInteractionRoot {
 		if (  "booleanValue".equals( datamemberName )  ) set_booleanValue( (Boolean)val );
 		else if (  "doubleValue".equals( datamemberName )  ) set_doubleValue( (Double)val );
 		else if (  "intValue".equals( datamemberName )  ) set_intValue( (Integer)val );
+		else if (  "sequenceNumber".equals( datamemberName )  ) set_sequenceNumber( (Integer)val );
 		else if (  "stringValue".equals( datamemberName )  ) set_stringValue( (String)val );		
 		else retval = super.setParameterAux( datamemberName, val );
 		
@@ -713,6 +752,8 @@ public class TestInteraction extends C2WInteractionRoot {
 		
 			datamembers.add( get_intValue_handle(), Integer.toString(get_intValue()).getBytes() );
 		
+			datamembers.add( get_sequenceNumber_handle(), Integer.toString(get_sequenceNumber()).getBytes() );
+		
 			datamembers.add( get_stringValue_handle(), get_stringValue().getBytes() );
 		
 	
@@ -729,6 +770,7 @@ public class TestInteraction extends C2WInteractionRoot {
 				_booleanValue = data._booleanValue;
 				_doubleValue = data._doubleValue;
 				_intValue = data._intValue;
+				_sequenceNumber = data._sequenceNumber;
 				_stringValue = data._stringValue;
 			
 		}

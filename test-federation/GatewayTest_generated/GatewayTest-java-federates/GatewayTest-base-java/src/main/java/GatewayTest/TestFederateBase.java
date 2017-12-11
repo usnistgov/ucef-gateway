@@ -44,6 +44,7 @@ public class TestFederateBase extends SynchronizedFederate {
         TestObject.publish_booleanValue();
         TestObject.publish_doubleValue();
         TestObject.publish_intValue();
+        TestObject.publish_sequenceNumber();
         TestObject.publish_stringValue();
         TestObject.publish(getLRC());
                 
@@ -51,6 +52,7 @@ public class TestFederateBase extends SynchronizedFederate {
         TestObject.subscribe_booleanValue();
         TestObject.subscribe_doubleValue();
         TestObject.subscribe_intValue();
+        TestObject.subscribe_sequenceNumber();
         TestObject.subscribe_stringValue();
         TestObject.subscribe(getLRC());
         	}

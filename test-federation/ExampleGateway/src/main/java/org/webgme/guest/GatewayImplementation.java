@@ -8,9 +8,9 @@ import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import gov.nist.hla.ii.InjectionCallback;
-import gov.nist.hla.ii.InjectionFederate;
-import gov.nist.hla.ii.config.InjectionFederateConfig;
+import gov.nist.hla.gateway.GatewayCallback;
+import gov.nist.hla.gateway.GatewayFederate;
+import gov.nist.hla.gateway.GatewayFederateConfig;
 import hla.rti.AttributeNotOwned;
 import hla.rti.FederateNotExecutionMember;
 import hla.rti.InteractionClassNotPublished;
@@ -20,12 +20,12 @@ import hla.rti.ObjectAlreadyRegistered;
 import hla.rti.ObjectClassNotPublished;
 import hla.rti.ObjectNotKnown;
 
-public class Gateway implements InjectionCallback {
+public class GatewayImplementation implements GatewayCallback {
     private static final Logger log = LogManager.getLogger();
     
     private static final String TEST_INTERACTION = "InteractionRoot.C2WInteractionRoot.TestInteraction";
     
-    private InjectionFederate injectionFederate;
+    private GatewayFederate gateway;
     
     public static void main(String[] args)
             throws IOException {
@@ -34,18 +34,18 @@ public class Gateway implements InjectionCallback {
             return;
         }
         
-        InjectionFederateConfig config = InjectionFederate.readConfiguration(args[0]);
-        Gateway gatewayFederate = new Gateway(config);
+        GatewayFederateConfig config = GatewayFederate.readConfiguration(args[0]);
+        GatewayImplementation gatewayFederate = new GatewayImplementation(config);
         gatewayFederate.run();
     }
     
-    public Gateway(InjectionFederateConfig configuration) {
-        this.injectionFederate = new InjectionFederate(configuration, this);
+    public GatewayImplementation(GatewayFederateConfig configuration) {
+        this.gateway = new GatewayFederate(configuration, this);
     }
     
     public void run() {
         log.trace("run");
-        injectionFederate.run();
+        gateway.run();
     }
     
     public void initializeSelf() {
@@ -55,7 +55,7 @@ public class Gateway implements InjectionCallback {
     public void initializeWithPeers() {
         log.trace("initializeWithPeers");
         try {
-            injectionFederate.registerObjectInstance("ObjectRoot.TestObject", "GatewayObject");
+            gateway.registerObjectInstance("ObjectRoot.TestObject", "GatewayObject");
         } catch (FederateNotExecutionMember | NameNotFound | ObjectClassNotPublished | ObjectAlreadyRegistered e) {
             throw new RuntimeException("failed to register object", e);
         }
@@ -78,7 +78,7 @@ public class Gateway implements InjectionCallback {
         }
         
         try {
-            injectionFederate.injectInteraction(TEST_INTERACTION, interactionValues, injectionFederate.getTimeStamp());
+            gateway.injectInteraction(TEST_INTERACTION, interactionValues, gateway.getTimeStamp());
             log.info(String.format("t=%f sent %s using %s", timeStep, TEST_INTERACTION, interactionValues.toString()));
         } catch (FederateNotExecutionMember | NameNotFound | InteractionClassNotPublished | InvalidFederationTime e) {
             throw new RuntimeException("failed to send interaction", e);
@@ -98,7 +98,7 @@ public class Gateway implements InjectionCallback {
         }
         
         try {
-            injectionFederate.updateObject("GatewayObject", objectValues, injectionFederate.getTimeStamp());
+            gateway.updateObject("GatewayObject", objectValues, gateway.getTimeStamp());
             log.info(String.format("t=%f sent %s using %s", timeStep, "GatewayObject", objectValues.toString()));
         } catch (FederateNotExecutionMember | ObjectNotKnown | NameNotFound | AttributeNotOwned
                 | InvalidFederationTime e) {

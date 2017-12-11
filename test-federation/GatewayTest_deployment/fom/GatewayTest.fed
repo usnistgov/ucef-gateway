@@ -53,6 +53,7 @@
   (attribute booleanValue reliable timestamp)
   (attribute doubleValue reliable timestamp)
   (attribute intValue reliable timestamp)
+  (attribute sequenceNumber reliable timestamp)
   (attribute stringValue reliable timestamp) )   ) 
   )
   (interactions
@@ -373,6 +374,7 @@
   (parameter federateFilter)
   (parameter intValue)
   (parameter originFed)
+  (parameter sequenceNumber)
   (parameter sourceFed)
   (parameter stringValue)
 )
