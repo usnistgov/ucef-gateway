@@ -56,6 +56,25 @@
                 <semantics></semantics>
             </attribute>
         </objectClass>
+        <objectClass>
+            <name>Manager</name>
+            <sharing>Neither</sharing>
+            <semantics></semantics>
+        <objectClass>
+            <name>Federate</name>
+            <sharing>Subscribe</sharing>
+            <semantics></semantics>
+
+            <attribute>
+                <name>FederateType</name>
+                <dataType>String</dataType>
+                <transportation>HLAreliable</transportation>
+                <order>TimeStamp</order>
+                <sharing>Subscribe</sharing>
+                <semantics></semantics>
+            </attribute>
+        </objectClass>
+        </objectClass>
         </objectClass>
     </objects>
     <interactions>

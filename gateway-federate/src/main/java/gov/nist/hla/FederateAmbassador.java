@@ -67,6 +67,9 @@ public class FederateAmbassador extends NullFederateAmbassador {
     // map the instance handle of a discovered object to its associated ObjectDetails
     private Map<Integer, ObjectDetails> objectInstances = new HashMap<Integer, ObjectDetails>();
 
+    // names of discovered object instances that have not been processed
+    private Queue<String> discoveredObjectInstances = new LinkedList<String>();
+
     // names of previously discovered object instances that have since been removed
     private Queue<String> removedObjectInstances = new LinkedList<String>();
 
@@ -147,6 +150,7 @@ public class FederateAmbassador extends NullFederateAmbassador {
         if (objectInstances.put(theObject, details) != null) {
             throw new FederateInternalError("discovered duplicate object " + details.toString());
         }
+        discoveredObjectInstances.add(details.getInstanceName());
         log.info("discovered object " + details.toString());
     }
 
@@ -227,6 +231,10 @@ public class FederateAmbassador extends NullFederateAmbassador {
 
     public ObjectReflection nextObjectReflection() {
         return receivedObjectReflections.poll(); // destructive read
+    }
+
+    public String nextDiscoveredObjectName() {
+        return discoveredObjectInstances.poll(); // destructive read
     }
 
     public String nextRemovedObjectName() {

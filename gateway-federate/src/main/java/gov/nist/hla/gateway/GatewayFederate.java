@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.ieee.standards.ieee1516._2010.AttributeType;
 import org.ieee.standards.ieee1516._2010.InteractionClassType;
 import org.ieee.standards.ieee1516._2010.ObjectClassType;
 import org.portico.impl.hla13.types.DoubleTime;
@@ -818,6 +819,7 @@ public class GatewayFederate {
             throws FederateNotExecutionMember {
         handleReceivedInteractions();
         handleReceivedObjectReflections();
+        handleDiscoveredObjectInstances();
         handleRemovedObjectInstances();
     }
     
@@ -865,6 +867,45 @@ public class GatewayFederate {
         } 
     }
     
+    private void handleDiscoveredObjectInstances()
+    		throws FederateNotExecutionMember {
+    	try {
+	        String discoveredObjectName;
+	        while ((discoveredObjectName = fedAmb.nextDiscoveredObjectName()) != null) {
+	        	int instanceHandle;
+				try {
+					instanceHandle = rtiAmb.getObjectInstanceHandle(discoveredObjectName);
+				} catch (ObjectNotKnown e) {
+					log.warn("object instance removed prior to discovery by federate: " + discoveredObjectName);
+					continue;
+				}
+	        	int classHandle = rtiAmb.getObjectClass(instanceHandle);
+	        	String classPath = rtiAmb.getObjectClassName(classHandle);
+	        	
+	        	if (classPath.startsWith("ObjectRoot.Manager.")) {
+	        		log.info("discovered new RTI managed object {} ({})", discoveredObjectName, classPath);
+	        		
+	        		Set<AttributeType> subscribed = objectModel.getSubscribedAttributes(objectModel.getObject(classPath));
+	        		Set<String> attributes = subscribed.stream().map( x -> x.getName().getValue()).collect(Collectors.toSet());
+	        		
+	        		rtiAmb.requestObjectAttributeValueUpdate(instanceHandle, convertToAttributeHandleSet(classHandle, attributes.toArray(new String[0])));
+	        		log.debug("requested updates for attributes {}", attributes);
+	        	}
+	        	log.debug("processed discovered instance {} ({})", discoveredObjectName, classPath);
+	        }
+		} catch (AttributeNotDefined | NameNotFound e) {
+			throw new RTIAmbassadorException("bad object model", e);
+		} catch (SaveInProgress | RestoreInProgress e) {
+			throw new UnsupportedServiceException("for federation save/restore", e);
+		} catch (RTIinternalError | ConcurrentAccessAttempted e) {
+    		throw new RTIAmbassadorException(e);
+    	} catch (ObjectNotKnown | ObjectClassNotDefined e) {
+			// instanceHandle retrieved from the RTI ambassador
+    		// classHandle retrieved from the RTI ambassador
+    		throw new RTIAmbassadorException("unreachable code", e);
+    	}
+    }
+
     private void handleRemovedObjectInstances() {
         String removedObjectName;
         while ((removedObjectName = fedAmb.nextRemovedObjectName()) != null) {

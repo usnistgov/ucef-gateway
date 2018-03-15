@@ -3,7 +3,6 @@ package gov.nist.hla;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -87,6 +86,12 @@ public class GatewayImplementation implements GatewayCallback {
 
     public void receiveObject(Double timeStep, String className, String instanceName, Map<String, String> attributes) {
         log.trace(String.format("receiveObject %f %s %s %s", timeStep, className, instanceName, attributes.toString()));
+        
+        if (className.startsWith("ObjectRoot.Manager.")) {
+        	// to demonstrate how to receive ObjectRoot.Manager.Federate (and other RTI managed objects)
+        	log.info("received RTI managed object {} ({}): {}", instanceName, className, attributes);
+        	return;
+        }
         
         objectState.putAll(attributes); // attributes will not contain entries for unchanged values
         log.info("received updated object values " + attributes.toString());
