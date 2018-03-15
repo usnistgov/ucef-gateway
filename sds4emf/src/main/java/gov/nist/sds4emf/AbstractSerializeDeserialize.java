@@ -9,34 +9,34 @@ import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
 
 public abstract class AbstractSerializeDeserialize {
 
-	static Logger log = LogManager.getLogger(AbstractSerializeDeserialize.class);
+    static Logger log = LogManager.getLogger(AbstractSerializeDeserialize.class);
 
-	protected static final ResourceSet resourceSet = new ResourceSetImpl();
-	protected static Resource resource;
+    protected static final ResourceSet resourceSet = new ResourceSetImpl();
+    protected static Resource resource;
 
-	protected static void init() {
-		log.trace("AbstractSerializeDeserialize==>" + resourceSet);
-		resourceSet.getPackageRegistry().put(EcorePackage.eNS_URI, EcorePackage.eINSTANCE);
-		log.trace("<==AbstractSerializeDeserialize");
-	}
-	
-	public static ResourceSet getResourceSet() {
-		return resourceSet;
-	}
+    protected static void init() {
+        log.trace("AbstractSerializeDeserialize==>" + resourceSet);
+        resourceSet.getPackageRegistry().put(EcorePackage.eNS_URI, EcorePackage.eINSTANCE);
+        log.trace("<==AbstractSerializeDeserialize");
+    }
+    
+    public static ResourceSet getResourceSet() {
+        return resourceSet;
+    }
 
-	public static Resource getResource() {
-		return resource;
-	}
-	
-	public static void associateExtension(String extension, Object obj) {
-		getResourceSet().getResourceFactoryRegistry().getExtensionToFactoryMap().put(extension, obj);
-	}
-	
-	public static void associateScheme(String scheme, Object obj) {
-		getResourceSet().getResourceFactoryRegistry().getProtocolToFactoryMap().put(scheme, obj);
-	}
-	
-	public static void registerPackage(String packageURI, Object packageImpl) {
-		getResourceSet().getPackageRegistry().put(packageURI, packageImpl);
-	}
+    public static Resource getResource() {
+        return resource;
+    }
+    
+    public static void associateExtension(String extension, Object obj) {
+        getResourceSet().getResourceFactoryRegistry().getExtensionToFactoryMap().put(extension, obj);
+    }
+    
+    public static void associateScheme(String scheme, Object obj) {
+        getResourceSet().getResourceFactoryRegistry().getProtocolToFactoryMap().put(scheme, obj);
+    }
+    
+    public static void registerPackage(String packageURI, Object packageImpl) {
+        getResourceSet().getPackageRegistry().put(packageURI, packageImpl);
+    }
 }
