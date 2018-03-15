@@ -8,14 +8,24 @@
     <packaging>jar</packaging>
     <parent>
         <groupId>gov.nist.hla</groupId>
-        <artifactId>pubsub-java</artifactId>
+        <artifactId>ucef-gateway</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
     <dependencies>
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.12</version>
+            <groupId>gov.nist.hla</groupId>
+            <version>0.0.1-SNAPSHOT</version>
+            <artifactId>fom2emf</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>gov.nist.hla</groupId>
+            <version>0.0.1-SNAPSHOT</version>
+            <artifactId>sds4emf</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.porticoproject</groupId>
+            <artifactId>portico</artifactId>
+            <version>2.1.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
@@ -28,29 +38,14 @@
             <version>2.8.1</version>
         </dependency>
         <dependency>
-            <groupId>com.lmax</groupId>
-            <artifactId>disruptor</artifactId>
-            <version>3.3.6</version>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>2.9.0</version>
         </dependency>
         <dependency>
-            <groupId>org.porticoproject</groupId>
-            <artifactId>portico</artifactId>
-            <version>2.1.0</version>
-        </dependency>
-        <dependency>
-            <groupId>gov.nist.hla</groupId>
-            <version>0.0.1-SNAPSHOT</version>
-            <artifactId>fom2emf</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>gov.nist.hla</groupId>
-            <version>0.0.1-SNAPSHOT</version>
-            <artifactId>sds4emf</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.cpswt</groupId>
-            <artifactId>federate-base</artifactId>
-            <version>0.6.0-SNAPSHOT</version>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.9.0</version>
         </dependency>
     </dependencies>
     <build>

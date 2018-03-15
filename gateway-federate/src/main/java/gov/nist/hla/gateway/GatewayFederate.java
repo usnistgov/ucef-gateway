@@ -11,7 +11,6 @@ import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.cpswt.hla.SynchronizationPoints;
 import org.ieee.standards.ieee1516._2010.InteractionClassType;
 import org.ieee.standards.ieee1516._2010.ObjectClassType;
 import org.portico.impl.hla13.types.DoubleTime;
@@ -95,6 +94,10 @@ import hla.rti.jlc.RtiFactoryFactory;
  */
 public class GatewayFederate {
     private static final Logger log = LogManager.getLogger();
+
+    private static final String READY_TO_POPULATE = "readyToPopulate";
+    private static final String READY_TO_RUN = "readyToRun";
+    private static final String READY_TO_RESIGN = "readyToResign";
 
     private static final String SIMULATION_END = "InteractionRoot.C2WInteractionRoot.SimulationControl.SimEnd";
     private static final String FEDERATE_JOIN = "InteractionRoot.C2WInteractionRoot.FederateJoinInteraction";
@@ -186,11 +189,11 @@ public class GatewayFederate {
             
             callback.initializeSelf();
             if (!configuration.getIsLateJoiner()) {
-                synchronize(SynchronizationPoints.ReadyToPopulate);
+                synchronize(READY_TO_POPULATE);
             }
             callback.initializeWithPeers();
             if (!configuration.getIsLateJoiner()) {
-                synchronize(SynchronizationPoints.ReadyToRun);
+                synchronize(READY_TO_RUN);
             }
             this.hasTimeStarted = true;
             
@@ -201,7 +204,7 @@ public class GatewayFederate {
             }
             
             if (!configuration.getIsLateJoiner() && receivedSimEnd) {
-                synchronize(SynchronizationPoints.ReadyToResign);
+                synchronize(READY_TO_RESIGN);
             }
             notifyOfFederationResign();
             resignFederationExecution();
