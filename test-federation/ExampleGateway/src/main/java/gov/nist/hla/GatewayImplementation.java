@@ -1,4 +1,4 @@
-package org.webgme.guest;
+package gov.nist.hla;
 
 import java.io.IOException;
 import java.util.HashMap;
