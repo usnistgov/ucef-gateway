@@ -66,7 +66,25 @@
             <semantics></semantics>
 
             <attribute>
+                <name>FederateHandle</name>
+                <dataType>int</dataType>
+                <transportation>HLAreliable</transportation>
+                <order>TimeStamp</order>
+                <sharing>Subscribe</sharing>
+                <semantics></semantics>
+            </attribute>
+
+            <attribute>
                 <name>FederateType</name>
+                <dataType>String</dataType>
+                <transportation>HLAreliable</transportation>
+                <order>TimeStamp</order>
+                <sharing>Subscribe</sharing>
+                <semantics></semantics>
+            </attribute>
+
+            <attribute>
+                <name>FederateHost</name>
                 <dataType>String</dataType>
                 <transportation>HLAreliable</transportation>
                 <order>TimeStamp</order>

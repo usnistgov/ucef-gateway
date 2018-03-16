@@ -43,11 +43,11 @@ public class FederateAmbassador extends NullFederateAmbassador {
             this.classHandle = classHandle;
             this.instanceName = instanceName;
         }
-        
+
         public int getInstanceHandle() {
             return instanceHandle;
         }
-        
+
         public int getClassHandle() {
             return classHandle;
         }
@@ -55,7 +55,7 @@ public class FederateAmbassador extends NullFederateAmbassador {
         public String getInstanceName() {
             return instanceName;
         }
-        
+
         public String toString() {
             return String.format("instance=%d class=%d name=%s", instanceHandle, classHandle, instanceName);
         }
@@ -136,8 +136,8 @@ public class FederateAmbassador extends NullFederateAmbassador {
     @Override
     public void receiveInteraction(int interactionClass, ReceivedInteraction theInteraction, byte[] userSuppliedTag,
             LogicalTime theTime, EventRetractionHandle eventRetractionHandle)
-            throws InteractionClassNotKnown, InteractionParameterNotKnown, InvalidFederationTime,
-            FederateInternalError {
+                    throws InteractionClassNotKnown, InteractionParameterNotKnown, InvalidFederationTime,
+                    FederateInternalError {
         Interaction newInteraction = new Interaction(interactionClass, theInteraction);
         receivedInteractions.add(newInteraction);
         log.debug("received " + newInteraction.toString());
@@ -167,8 +167,8 @@ public class FederateAmbassador extends NullFederateAmbassador {
     @Override
     public void reflectAttributeValues(int theObject, ReflectedAttributes theAttributes, byte[] userSuppliedTag,
             LogicalTime theTime, EventRetractionHandle retractionHandle)
-            throws ObjectNotKnown, AttributeNotKnown, FederateOwnsAttributes, InvalidFederationTime,
-            FederateInternalError {
+                    throws ObjectNotKnown, AttributeNotKnown, FederateOwnsAttributes, InvalidFederationTime,
+                    FederateInternalError {
         ObjectDetails details = objectInstances.get(theObject);
         if (details == null) {
             throw new ObjectNotKnown("no discovered object instance with handle " + theObject);
@@ -192,11 +192,12 @@ public class FederateAmbassador extends NullFederateAmbassador {
     @Override
     public void removeObjectInstance(int theObject, byte[] userSuppliedTag, LogicalTime theTime,
             EventRetractionHandle retractionHandle)
-            throws ObjectNotKnown, InvalidFederationTime, FederateInternalError {
+                    throws ObjectNotKnown, InvalidFederationTime, FederateInternalError {
         ObjectDetails details = objectInstances.remove(theObject);
         if (details == null) {
             throw new ObjectNotKnown("no discovered object instance with handle " + theObject);
         }
+        // it is possible this instance is still in the discoveredObjectInstances queue
         removedObjectInstances.add(details.getInstanceName());
         log.info("removed object " + details.toString());
     }

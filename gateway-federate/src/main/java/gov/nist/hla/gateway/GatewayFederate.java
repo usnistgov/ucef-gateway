@@ -106,18 +106,18 @@ public class GatewayFederate {
 
     private GatewayFederateConfig configuration;
     private GatewayCallback callback;
-    
+
     private RTIambassador rtiAmb;
     private FederateAmbassador fedAmb;
     private ObjectModel objectModel;
-    
+
     private boolean isRunning = false;
     private boolean hasTimeStarted = false;
     private boolean receivedSimEnd = false;
     private boolean exitFlag = false;
-    
+
     private double lastRequestedTime;
-    
+
     /**
      * Create an {@link GatewayFederateConfig} from a JSON configuration file that can be used to construct a gateway
      * federate instance.
@@ -133,7 +133,7 @@ public class GatewayFederate {
         ObjectMapper mapper = new ObjectMapper();
         return mapper.readValue(configFile, GatewayFederateConfig.class);
     }
-    
+
     /**
      * Constructs a gateway federate using the given configuration that will yield control during {@link #run} to
      * the given {@link GatewayCallback}.
@@ -152,7 +152,7 @@ public class GatewayFederate {
         fedAmb = new FederateAmbassador();
         objectModel = new ObjectModel(configuration.getFomFilepath());
     }
-    
+
     /**
      * A blocking call that will execute the complete life cycle of the gateway federate. This method will exit when
      * either the federation sends an interaction that represents simulation end, or {@link #requestExit} is invoked.
@@ -160,7 +160,7 @@ public class GatewayFederate {
      */
     public void run() {
         log.trace("run");
-        
+
         if (isRunning) {
             throw new RuntimeException("gateway federate instance already running");
         }
@@ -169,7 +169,7 @@ public class GatewayFederate {
         this.hasTimeStarted = false;
         this.lastRequestedTime = 0;
         this.isRunning = true;
-        
+
         try {
             joinFederationExecution();
         } catch (FederationExecutionDoesNotExist e) {
@@ -179,15 +179,15 @@ public class GatewayFederate {
             log.fatal("run halted due to interrupt");
             return;
         }
-        
+
         try {
             enableAsynchronousDelivery();
             enableTimeConstrained();
             enableTimeRegulation();
-            
+
             publishAndSubscribe();
             notifyOfFederationJoin();
-            
+
             callback.initializeSelf();
             if (!configuration.getIsLateJoiner()) {
                 synchronize(READY_TO_POPULATE);
@@ -197,13 +197,13 @@ public class GatewayFederate {
                 synchronize(READY_TO_RUN);
             }
             this.hasTimeStarted = true;
-            
+
             while (!isExitCondition()) {
                 log.trace("run t=" + getLogicalTime());
                 callback.doTimeStep(lastRequestedTime);
                 advanceLogicalTime();
             }
-            
+
             if (!configuration.getIsLateJoiner() && receivedSimEnd) {
                 synchronize(READY_TO_RESIGN);
             }
@@ -215,7 +215,7 @@ public class GatewayFederate {
         callback.terminate();
         this.isRunning = false;
     }
-    
+
     /**
      * Yield control to the RTI ambassador to handle any receive order messages in the local message queue. This call
      * will invoke {@link GatewayCallback#receiveInteraction} and {@link GatewayCallback#receiveObject} when
@@ -232,7 +232,7 @@ public class GatewayFederate {
         }
         handleSubscriptions();
     }
-    
+
     /**
      * Object model accessor
      * 
@@ -241,7 +241,7 @@ public class GatewayFederate {
     public ObjectModel getObjectModel() {
         return objectModel;
     }
-    
+
     /**
      * Logical time accessor
      * 
@@ -250,7 +250,7 @@ public class GatewayFederate {
     public double getLogicalTime() {
         return fedAmb.getLogicalTime();
     }
-    
+
     /**
      * Get the lowest value timestamp that can be used to send interactions and object updates.
      * 
@@ -259,7 +259,7 @@ public class GatewayFederate {
     public double getTimeStamp() {
         return fedAmb.getLogicalTime() + configuration.getLookAhead();
     }
-    
+
     /**
      * Check whether the local federate has begun its logical time progression loop. This method can be used in both
      * {@link GatewayCallback#receiveInteraction} and {@link GatewayCallback#receiveObject} to distinguish between
@@ -270,7 +270,7 @@ public class GatewayFederate {
     public boolean hasTimeStarted() {
         return this.hasTimeStarted;
     }
-    
+
     /**
      * Request this class resign from its federation and return from {@link #run} after the next logical time step.
      */
@@ -278,7 +278,7 @@ public class GatewayFederate {
         log.info("application requested exit");
         this.exitFlag = true;
     }
-    
+
     /**
      * Create a new object instance in the current federation and assign it a random name.
      * 
@@ -305,7 +305,7 @@ public class GatewayFederate {
             throw new RTIAmbassadorException(e);
         }
     }
-    
+
     /**
      * Create a new object instance in the current federation and assign it the given name.
      * 
@@ -333,7 +333,7 @@ public class GatewayFederate {
             throw new RTIAmbassadorException(e);
         } 
     }
-    
+
     /**
      * Delete an object instance created from a prior call to {@link #registerObjectInstance}
      * 
@@ -354,7 +354,7 @@ public class GatewayFederate {
             throw new RTIAmbassadorException(e);
         }
     }
-    
+
     /**
      * Create and send a receive order interaction to the federation. Other federates can receive this interaction
      * during the same logical time step it is sent using an explicit call to {@link #tick}. Because the message will
@@ -389,7 +389,7 @@ public class GatewayFederate {
             throw new RTIAmbassadorException(e);
         } 
     }
-    
+
     /**
      * Create and send an interaction to the federation which other federates will receive once their logical time
      * exceeds the given timestamp. The value of timestamp must be greater than or equal to the value returned by
@@ -410,7 +410,7 @@ public class GatewayFederate {
     public void sendInteraction(String className, Map<String, String> parameters, double timestamp)
             throws FederateNotExecutionMember, NameNotFound, InteractionClassNotPublished, InvalidFederationTime {
         log.trace("sendInteraction " + className + " " + Arrays.toString(parameters.entrySet().toArray())
-                + " " + timestamp);
+        + " " + timestamp);
         try {
             int classHandle = rtiAmb.getInteractionClassHandle(className);
             Map<String, String> modifiedParameters = addRootParameters(className, parameters);
@@ -426,7 +426,7 @@ public class GatewayFederate {
             throw new RTIAmbassadorException(e);
         } 
     }
-    
+
     /**
      * Send a receive order update to an existing and owned object instance. Other federates can receive this update
      * during the same logical time step it is sent using an explicit call to {@link #tick}. Because the message will
@@ -458,7 +458,7 @@ public class GatewayFederate {
             throw new RTIAmbassadorException(e);
         } 
     }
-    
+
     /**
      * Send an update to an existing and owned object instance which other federates will receive once their logical
      * time exceeds the given timestamp. The value of timestamp must be greater than or equal to the value returned by
@@ -476,7 +476,7 @@ public class GatewayFederate {
     public void updateObject(String instanceName, Map<String, String> attributes, double timestamp)
             throws FederateNotExecutionMember, ObjectNotKnown, NameNotFound, AttributeNotOwned, InvalidFederationTime {
         log.trace("updateObject " + instanceName + " " + Arrays.toString(attributes.entrySet().toArray()) 
-                + " " + timestamp);
+        + " " + timestamp);
         try {
             int instanceHandle = rtiAmb.getObjectInstanceHandle(instanceName);
             int classHandle = rtiAmb.getObjectClass(instanceHandle);
@@ -492,24 +492,24 @@ public class GatewayFederate {
             throw new RTIAmbassadorException(e);
         } 
     }
-    
+
     private boolean isExitCondition() {
         return receivedSimEnd || exitFlag;
     }
-    
+
     private void joinFederationExecution()
             throws InterruptedException, FederationExecutionDoesNotExist {
         log.trace("joinFederationExecution");
         final String federateName = configuration.getFederateName();
         final String federationName = configuration.getFederationId();
         boolean joinSuccessful = false;
-        
+
         for (int i = 1; !joinSuccessful && i <= configuration.getMaxReconnectAttempts(); i++) {
             if (i > 1) {
                 log.info("next join attempt in " + configuration.getWaitReconnectMs() + " ms...");
                 Thread.sleep(configuration.getWaitReconnectMs());
             }
-            
+
             log.info("joining federation " + federationName + " as " + federateName + " (attempt " + i + ")");
             try {
                 rtiAmb.joinFederationExecution(federateName, federationName, fedAmb, null);
@@ -526,7 +526,7 @@ public class GatewayFederate {
             }
         }
     }
-    
+
     private void synchronize(String label)
             throws FederateNotExecutionMember {
         log.info("waiting for announcement of the synchronization point " + label);
@@ -550,7 +550,7 @@ public class GatewayFederate {
             tick();
         }
     }
-    
+
     private void enableAsynchronousDelivery()
             throws FederateNotExecutionMember {
         try {
@@ -607,7 +607,7 @@ public class GatewayFederate {
             throw new RTIAmbassadorException(e);
         }
     }
-    
+
     private void publishAndSubscribe()
             throws FederateNotExecutionMember {
         log.trace("publishAndSubscribe");
@@ -634,7 +634,7 @@ public class GatewayFederate {
             throw new RTIAmbassadorException("invalid object model", e);
         }
     }
-    
+
     private void publishInteraction(String classPath)
             throws NameNotFound, FederateNotExecutionMember {
         log.info("creating publication for " + classPath);
@@ -650,7 +650,7 @@ public class GatewayFederate {
             throw new RTIAmbassadorException(e);
         }
     }
-    
+
     private void subscribeInteraction(String classPath)
             throws NameNotFound, FederateNotExecutionMember {
         log.info("creating subscription for " + classPath);
@@ -668,7 +668,7 @@ public class GatewayFederate {
             throw new RTIAmbassadorException("cannot subscribe to Manager.Federate.Report.ReportServiceInvocation", e);
         }
     }
-    
+
     private void publishObject(String classPath, String... attributes)
             throws NameNotFound, FederateNotExecutionMember {
         log.info("creating publication for " + classPath + " attributes " + Arrays.toString(attributes));
@@ -688,7 +688,7 @@ public class GatewayFederate {
             throw new RTIAmbassadorException(e);
         }
     }
-    
+
     private void subscribeObject(String classPath, String... attributes)
             throws NameNotFound, FederateNotExecutionMember {
         log.info("creating subscription for " + classPath + " attributes" + Arrays.toString(attributes));
@@ -707,7 +707,7 @@ public class GatewayFederate {
             throw new RTIAmbassadorException(e);
         }
     }
-    
+
     private AttributeHandleSet convertToAttributeHandleSet(int classHandle, String... attributes)
             throws ObjectClassNotDefined, NameNotFound, FederateNotExecutionMember, RTIinternalError {
         log.trace("convertToAttributeHandleSet " + classHandle + " " + Arrays.toString(attributes));
@@ -723,16 +723,16 @@ public class GatewayFederate {
         }
         return attributeHandles;
     }
-    
+
     private void notifyOfFederationJoin()
             throws FederateNotExecutionMember {
         log.trace("notifyOfFederationJoin");
-        
+
         if (!objectModel.getPublishedInteractions().contains(objectModel.getInteraction(FEDERATE_JOIN))) {
             log.warn("not configured to publish " + FEDERATE_JOIN);
             return;
         }
-        
+
         Map<String, String> parameters = new HashMap<String, String>();
         parameters.put("FederateId", configuration.getFederateName());
         parameters.put("FederateType", configuration.getFederateName());
@@ -741,7 +741,7 @@ public class GatewayFederate {
         } else {
             parameters.put("IsLateJoiner", "false");
         }
-        
+
         try {
             sendInteraction(FEDERATE_JOIN, parameters); // does this need a timestamp ?
         } catch (InteractionClassNotPublished e) {
@@ -751,16 +751,16 @@ public class GatewayFederate {
             throw new RTIAmbassadorException("unexpected parameters for " + FEDERATE_JOIN, e);
         }
     }
-    
+
     private void notifyOfFederationResign()
             throws FederateNotExecutionMember {
         log.trace("notifyOfFederationResign");
-        
+
         if (!objectModel.getPublishedInteractions().contains(objectModel.getInteraction(FEDERATE_RESIGN))) {
             log.warn("not configured to publish " + FEDERATE_RESIGN);
             return;
         }
-        
+
         Map<String, String> parameters = new HashMap<String, String>();
         parameters.put("FederateId", configuration.getFederateName());
         parameters.put("FederateType", configuration.getFederateName());
@@ -769,7 +769,7 @@ public class GatewayFederate {
         } else {
             parameters.put("IsLateJoiner", "false");
         }
-        
+
         try {
             sendInteraction(FEDERATE_RESIGN, parameters); // does this need a timestamp ?
         } catch (InteractionClassNotPublished e) {
@@ -779,7 +779,7 @@ public class GatewayFederate {
             throw new RTIAmbassadorException("unexpected parameters for " + FEDERATE_RESIGN, e);
         }
     }
-    
+
     private void advanceLogicalTime()
             throws TimeAdvanceAlreadyInProgress, FederateNotExecutionMember {
         lastRequestedTime = fedAmb.getLogicalTime() + configuration.getStepSize();
@@ -800,7 +800,7 @@ public class GatewayFederate {
             tick();
         }
     }
-    
+
     private void resignFederationExecution() throws FederateNotExecutionMember {
         log.info("resigning from the federation execution " + configuration.getFederationId());
         try {
@@ -814,15 +814,15 @@ public class GatewayFederate {
             throw new RTIAmbassadorException(e);
         }
     }
-    
+
     private void handleSubscriptions()
             throws FederateNotExecutionMember {
         handleReceivedInteractions();
-        handleReceivedObjectReflections();
         handleDiscoveredObjectInstances();
+        handleReceivedObjectReflections();
         handleRemovedObjectInstances();
     }
-    
+
     private void handleReceivedInteractions()
             throws FederateNotExecutionMember {
         try {
@@ -832,7 +832,7 @@ public class GatewayFederate {
                 String interactionName = rtiAmb.getInteractionClassName(classHandle);
                 Map<String, String> parameters = convertToMap(receivedInteraction);
                 callback.receiveInteraction(lastRequestedTime, interactionName, parameters);
-    
+
                 if (interactionName.equals(SIMULATION_END)) {
                     receivedSimEnd = true;
                     log.info("received " + SIMULATION_END);
@@ -846,7 +846,7 @@ public class GatewayFederate {
             throw new RTIAmbassadorException(e);
         } 
     }
-    
+
     private void handleReceivedObjectReflections()
             throws FederateNotExecutionMember {
         try {
@@ -866,44 +866,57 @@ public class GatewayFederate {
             throw new RTIAmbassadorException(e);
         } 
     }
-    
+
     private void handleDiscoveredObjectInstances()
-    		throws FederateNotExecutionMember {
-    	try {
-	        String discoveredObjectName;
-	        while ((discoveredObjectName = fedAmb.nextDiscoveredObjectName()) != null) {
-	        	int instanceHandle;
-				try {
-					instanceHandle = rtiAmb.getObjectInstanceHandle(discoveredObjectName);
-				} catch (ObjectNotKnown e) {
-					log.warn("object instance removed prior to discovery by federate: " + discoveredObjectName);
-					continue;
-				}
-	        	int classHandle = rtiAmb.getObjectClass(instanceHandle);
-	        	String classPath = rtiAmb.getObjectClassName(classHandle);
-	        	
-	        	if (classPath.startsWith("ObjectRoot.Manager.")) {
-	        		log.info("discovered new RTI managed object {} ({})", discoveredObjectName, classPath);
-	        		
-	        		Set<AttributeType> subscribed = objectModel.getSubscribedAttributes(objectModel.getObject(classPath));
-	        		Set<String> attributes = subscribed.stream().map( x -> x.getName().getValue()).collect(Collectors.toSet());
-	        		
-	        		rtiAmb.requestObjectAttributeValueUpdate(instanceHandle, convertToAttributeHandleSet(classHandle, attributes.toArray(new String[0])));
-	        		log.debug("requested updates for attributes {}", attributes);
-	        	}
-	        	log.debug("processed discovered instance {} ({})", discoveredObjectName, classPath);
-	        }
-		} catch (AttributeNotDefined | NameNotFound e) {
-			throw new RTIAmbassadorException("bad object model", e);
-		} catch (SaveInProgress | RestoreInProgress e) {
-			throw new UnsupportedServiceException("for federation save/restore", e);
-		} catch (RTIinternalError | ConcurrentAccessAttempted e) {
-    		throw new RTIAmbassadorException(e);
-    	} catch (ObjectNotKnown | ObjectClassNotDefined e) {
-			// instanceHandle retrieved from the RTI ambassador
-    		// classHandle retrieved from the RTI ambassador
-    		throw new RTIAmbassadorException("unreachable code", e);
-    	}
+            throws FederateNotExecutionMember {
+        String instanceName;
+        int instanceHandle;
+        
+        String className;
+        int classHandle;
+
+        // request updates for all subscribed attributes of discovered instances managed by the portico RTI
+        //  this is not exposed through the gateway callbacks because our federates do not support this HLA service
+        while ((instanceName = fedAmb.nextDiscoveredObjectName()) != null) {
+            try {
+                try {
+                    instanceHandle = rtiAmb.getObjectInstanceHandle(instanceName);
+                } catch (ObjectNotKnown e) {
+                    log.warn("object instance {} removed before discovery", instanceName);
+                    continue;
+                }
+                classHandle = rtiAmb.getObjectClass(instanceHandle);
+                className = rtiAmb.getObjectClassName(classHandle);
+                
+                if (className.startsWith("ObjectRoot.Manager.")) {
+                    log.info("discovered RTI managed object {} ({})", instanceName, className);
+
+                    // get a set of subscribed attribute names from the object model
+                    ObjectClassType objectClassType = objectModel.getObject(className);
+                    Set<AttributeType> subscribedAttributes = objectModel.getSubscribedAttributes(objectClassType);
+                    Set<String> subscribedAttributeNames = subscribedAttributes.stream().
+                            map( attribute -> attribute.getName().getValue()).
+                            collect(Collectors.toSet());
+
+                    AttributeHandleSet requestedAttributes =
+                            convertToAttributeHandleSet(classHandle, subscribedAttributeNames.toArray(new String[0]));
+                    rtiAmb.requestObjectAttributeValueUpdate(instanceHandle, requestedAttributes);
+                    log.debug("requested updates for attributes {}", subscribedAttributeNames);
+                }
+                log.debug("processed discovered instance {} ({})", instanceName, className);
+            } catch (RTIinternalError | ConcurrentAccessAttempted e) {
+                throw new RTIAmbassadorException(e);
+            } catch (ObjectNotKnown | ObjectClassNotDefined | AttributeNotDefined e) {
+                // object instance handle retrieved from the RTI ambassador
+                // object class handle retrieved from the RTI ambassador
+                // attribute handles retrieved from the RTI ambassador
+                throw new RTIAmbassadorException("unreachable code", e);
+            } catch (SaveInProgress | RestoreInProgress e) {
+                throw new UnsupportedServiceException("for federation save/restore", e);
+            } catch (NameNotFound e) {
+                throw new RTIAmbassadorException("bad object model", e);
+            }
+        }
     }
 
     private void handleRemovedObjectInstances() {
@@ -912,7 +925,7 @@ public class GatewayFederate {
             log.info("no longer receiving updates for object " + removedObjectName);
         }
     }
-    
+
     private Map<String, String> convertToMap(Interaction receivedInteraction)
             throws InteractionClassNotDefined, InteractionParameterNotDefined, FederateNotExecutionMember, RTIinternalError {
         int interactionHandle = receivedInteraction.getClassHandle();
@@ -937,7 +950,7 @@ public class GatewayFederate {
         }
         return attributes;
     }
-    
+
     private Map<String, String> addRootParameters(String className, Map<String, String> parameters) {
         log.trace("addRootParameters " + className + " " + parameters.toString());
         Map<String, String> modifiedParameters = new HashMap<String, String>(parameters);
@@ -950,7 +963,7 @@ public class GatewayFederate {
         }
         return modifiedParameters;
     }
-    
+
     private SuppliedParameters convertToSuppliedParameters(int classHandle, Map<String, String> parameters)
             throws FederateNotExecutionMember, InteractionClassNotDefined, NameNotFound, RTIinternalError {
         log.trace("convertToSuppliedParameters " + classHandle + " " + parameters.toString());
@@ -962,7 +975,7 @@ public class GatewayFederate {
         }
         return suppliedParameters;
     }
-    
+
     private SuppliedAttributes convertToSuppliedAttributes(int classHandle, Map<String, String> attributes)
             throws FederateNotExecutionMember, ObjectClassNotDefined, NameNotFound, RTIinternalError {
         log.trace("convertToSuppliedAttributes " + classHandle + " " + attributes.toString());

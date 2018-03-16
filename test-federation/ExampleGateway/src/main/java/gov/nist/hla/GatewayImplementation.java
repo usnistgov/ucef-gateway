@@ -21,34 +21,34 @@ import hla.rti.ObjectNotKnown;
 
 public class GatewayImplementation implements GatewayCallback {
     private static final Logger log = LogManager.getLogger();
-    
+
     private static final String TEST_INTERACTION = "InteractionRoot.C2WInteractionRoot.TestInteraction";
-    
+
     private GatewayFederate gateway;
-    
+
     private Map<String, String> objectState = new HashMap<String, String>();
-    
+
     public static void main(String[] args)
             throws IOException {
         if (args.length != 1) {
             log.error("missing command line argument for JSON configuration file");
             return;
         }
-        
+
         GatewayFederateConfig config = GatewayFederate.readConfiguration(args[0]);
         GatewayImplementation gatewayFederate = new GatewayImplementation(config);
         gatewayFederate.run();
     }
-    
+
     public GatewayImplementation(GatewayFederateConfig configuration) {
         this.gateway = new GatewayFederate(configuration, this);
     }
-    
+
     public void run() {
         log.trace("run");
         gateway.run();
     }
-    
+
     public void initializeSelf() {
         log.trace("initializeSelf");
     }
@@ -61,21 +61,21 @@ public class GatewayImplementation implements GatewayCallback {
             throw new RuntimeException("failed to register object", e);
         }
     }
-    
+
     public void receiveInteraction(Double timeStep, String className, Map<String, String> parameters) {
         log.trace(String.format("receiveInteraction %f %s %s", timeStep, className, parameters.toString()));
-        
+
         if (className.equals("InteractionRoot.C2WInteractionRoot.SimulationControl.SimEnd")) {
             return;
         }
-        
+
         Map<String, String> interactionValues = new HashMap<String, String>();
         interactionValues.put("sequenceNumber", parameters.get("sequenceNumber"));
         interactionValues.put("booleanValue", parameters.get("booleanValue"));
         interactionValues.put("doubleValue", parameters.get("doubleValue"));
         interactionValues.put("intValue", parameters.get("intValue"));
         interactionValues.put("stringValue", parameters.get("stringValue"));
-        
+
         try {
             gateway.sendInteraction(TEST_INTERACTION, interactionValues, gateway.getTimeStamp());
             log.info(String.format("t=%f sent %s using %s", timeStep, TEST_INTERACTION, interactionValues.toString()));
@@ -86,16 +86,16 @@ public class GatewayImplementation implements GatewayCallback {
 
     public void receiveObject(Double timeStep, String className, String instanceName, Map<String, String> attributes) {
         log.trace(String.format("receiveObject %f %s %s %s", timeStep, className, instanceName, attributes.toString()));
-        
+
         if (className.startsWith("ObjectRoot.Manager.")) {
-        	// to demonstrate how to receive ObjectRoot.Manager.Federate (and other RTI managed objects)
-        	log.info("received RTI managed object {} ({}): {}", instanceName, className, attributes);
-        	return;
+            // to demonstrate how to receive ObjectRoot.Manager.Federate (and other RTI managed objects)
+            log.info("received RTI managed object {} ({}): {}", instanceName, className, attributes);
+            return;
         }
-        
+
         objectState.putAll(attributes); // attributes will not contain entries for unchanged values
         log.info("received updated object values " + attributes.toString());
-        
+
         try {
             gateway.updateObject("GatewayObject", objectState, gateway.getTimeStamp());
             log.info(String.format("t=%f sent %s using %s", timeStep, "GatewayObject", objectState.toString()));
