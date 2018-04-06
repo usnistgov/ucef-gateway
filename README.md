@@ -1,3 +1,5 @@
+This code was designed to run in the UCEF Virtual Machine (https://github.com/usnistgov/ucef). When using a different environment, the Eclipse Modeling Framework dependencies will have to be extracted from Eclipse and installed into the local maven repository before the code will compile. The gateway has very limited support when run outside of UCEF.
+
 # UCEF Gateway
 A generic federate that supports three broad capabilities:
 1. The sending of interactions and object updates without dependencies on WebGME generated Java classes.
