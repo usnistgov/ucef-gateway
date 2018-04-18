@@ -36,14 +36,40 @@ import gov.nist.sds4emf.Deserialize;
  * @author Thomas Roth
  */
 public class ObjectModel {
-    public static final String INTERACTION_ROOT     = "InteractionRoot";
-    public static final String INTERACTION_CPSWT    = INTERACTION_ROOT + ".C2WInteractionRoot";
-    public static final String SIMULATION_END       = INTERACTION_CPSWT + ".SimulationControl.SimEnd";
-    public static final String FEDERATE_JOIN        = INTERACTION_CPSWT + ".FederateJoinInteraction";
-    public static final String FEDERATE_RESIGN      = INTERACTION_CPSWT + ".FederateResignInteraction";
+    /**
+     * The string identifier of the root HLA interaction class.
+     */
+    public static final String INTERACTION_ROOT = "InteractionRoot";
     
-    public static final String OBJECT_ROOT  = "ObjectRoot";
-    public static final String OBJECT_MOM   = OBJECT_ROOT + ".Manager";
+    /**
+     * The string identifier of the parent class for interactions generated from WebGME/UCEF.
+     */
+    public static final String INTERACTION_CPSWT = INTERACTION_ROOT + ".C2WInteractionRoot";
+    
+    /**
+     * The string identifier of the interaction that indicates all federates should resign.
+     */
+    public static final String SIMULATION_END = INTERACTION_CPSWT + ".SimulationControl.SimEnd";
+    
+    /**
+     * The string identifier of the interaction that is broadcast when a federate joins the federation.
+     */
+    public static final String FEDERATE_JOIN = INTERACTION_CPSWT + ".FederateJoinInteraction";
+    
+    /**
+     * The string identifier of the interaction that is broadcast when a federate leaves the federation.
+     */
+    public static final String FEDERATE_RESIGN = INTERACTION_CPSWT + ".FederateResignInteraction";
+    
+    /**
+     * The string identifier of the root HLA object class.
+     */
+    public static final String OBJECT_ROOT = "ObjectRoot";
+    
+    /**
+     * The string identifier of the parent class for objects managed by the RTI Management Object Model (MOM).
+     */
+    public static final String OBJECT_MOM = OBJECT_ROOT + ".Manager";
     
     private static final Logger log = LogManager.getLogger();
     
