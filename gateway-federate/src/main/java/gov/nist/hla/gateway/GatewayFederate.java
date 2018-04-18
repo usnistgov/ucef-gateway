@@ -973,7 +973,7 @@ public class GatewayFederate {
     private Map<String, String> addRootParameters(String className, Map<String, String> parameters) {
         log.trace("addRootParameters " + className + " " + parameters.toString());
         Map<String, String> modifiedParameters = new HashMap<String, String>(parameters);
-        if (className.contains(ObjectModel.INTERACTION_CPSWT)) {
+        if (className.equals(ObjectModel.INTERACTION_CPSWT) || className.startsWith(ObjectModel.INTERACTION_CPSWT + ".")) {
             modifiedParameters.putIfAbsent("sourceFed", configuration.getFederateName());
             modifiedParameters.putIfAbsent("originFed", configuration.getFederateName());
             modifiedParameters.putIfAbsent("federateFilter", "");
