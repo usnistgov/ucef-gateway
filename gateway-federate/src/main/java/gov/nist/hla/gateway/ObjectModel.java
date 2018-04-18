@@ -36,6 +36,12 @@ import gov.nist.sds4emf.Deserialize;
  * @author Thomas Roth
  */
 public class ObjectModel {
+    public static final String INTERACTION_ROOT     = "InteractionRoot";
+    public static final String C2W_INTERACTION_ROOT = INTERACTION_ROOT + ".C2WInteractionRoot";
+    public static final String SIMULATION_END       = C2W_INTERACTION_ROOT + ".SimulationControl.SimEnd";
+    public static final String FEDERATE_JOIN        = C2W_INTERACTION_ROOT + ".FederateJoinInteraction";
+    public static final String FEDERATE_RESIGN      = C2W_INTERACTION_ROOT + ".FederateResignInteraction";
+    
     private static final Logger log = LogManager.getLogger();
     
     private static boolean packageRegistered = false;
@@ -158,6 +164,29 @@ public class ObjectModel {
     }
     
     /**
+     * Checks if the passed interaction class is used in the {@link GatewayFederate} implementation. The gateway
+     * handles some core interactions to communicate with federates generated from UCEF. These interactions might not
+     * be useful to the gateway application, and this method can be used to filter them.
+     * 
+     * @param interaction An interaction from the object model to compare against the core interactions.
+     * @return True if the interaction is used in the {@link GatewayFederate} implementation.
+     */
+    public boolean isCoreInteraction(InteractionClassType interaction) {
+        final String classPath = getClassPath(interaction);
+        
+        switch (classPath) {
+            case INTERACTION_ROOT:
+            case C2W_INTERACTION_ROOT:
+            case SIMULATION_END:
+            case FEDERATE_JOIN:
+            case FEDERATE_RESIGN:
+                return true;
+            default:
+                return false;
+        }
+    }
+    
+    /**
      * Get the ObjectClassType associated with the given class path.
      * 
      * @param classPath The fully qualified HLA class path for the object to retrieve
@@ -258,6 +287,18 @@ public class ObjectModel {
             }
         }
         return null;
+    }
+    
+    /**
+     * Checks if the passed object class is used in the {@link GatewayFederate} implementation. The gateway may in the
+     * future handle some core objects to communicate with federates generated from UCEF. These objects might not be
+     * useful to the gateway application, and this method can be used to filter them.
+     * 
+     * @param object An object class from the object model to compare against the core objects.
+     * @return True if the object class is used in the {@link GatewayFederate} implementation.
+     */
+    public boolean isCoreObject(ObjectClassType object) {
+        return false; // there are no core objects in the current implementation
     }
     
     private boolean isPublish(SharingType sharingType) {
