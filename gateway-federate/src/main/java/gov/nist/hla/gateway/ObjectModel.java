@@ -37,24 +37,17 @@ import gov.nist.sds4emf.Deserialize;
  */
 public class ObjectModel {
     public static final String INTERACTION_ROOT     = "InteractionRoot";
-    public static final String C2W_INTERACTION_ROOT = INTERACTION_ROOT + ".C2WInteractionRoot";
-    public static final String SIMULATION_END       = C2W_INTERACTION_ROOT + ".SimulationControl.SimEnd";
-    public static final String FEDERATE_JOIN        = C2W_INTERACTION_ROOT + ".FederateJoinInteraction";
-    public static final String FEDERATE_RESIGN      = C2W_INTERACTION_ROOT + ".FederateResignInteraction";
+    public static final String INTERACTION_CPSWT    = INTERACTION_ROOT + ".C2WInteractionRoot";
+    public static final String SIMULATION_END       = INTERACTION_CPSWT + ".SimulationControl.SimEnd";
+    public static final String FEDERATE_JOIN        = INTERACTION_CPSWT + ".FederateJoinInteraction";
+    public static final String FEDERATE_RESIGN      = INTERACTION_CPSWT + ".FederateResignInteraction";
+    
+    public static final String OBJECT_ROOT  = "ObjectRoot";
+    public static final String OBJECT_MOM   = OBJECT_ROOT + ".Manager";
     
     private static final Logger log = LogManager.getLogger();
     
     private static boolean packageRegistered = false;
-    
-    private static ObjectModelType readObjectModel(String filepath) {
-        if (!packageRegistered) {
-            Deserialize.associateExtension("xml", new _2010ResourceFactoryImpl());
-            Deserialize.registerPackage(_2010Package.eNS_URI, _2010Package.eINSTANCE);
-            packageRegistered = true;
-        }
-        DocumentRoot documentRoot = (DocumentRoot) Deserialize.it(filepath);
-        return documentRoot.getObjectModel();
-    }
     
     private ObjectModelType objectModel;
     
@@ -87,7 +80,7 @@ public class ObjectModel {
      */
     public ObjectModel(String filepath) {
         log.info("creating object model from " + filepath);
-        this.objectModel = ObjectModel.readObjectModel(filepath);
+        this.objectModel = readObjectModel(filepath);
         initializeInteractionVariables();
         initializeObjectVariables();
     }
@@ -176,7 +169,7 @@ public class ObjectModel {
         
         switch (classPath) {
             case INTERACTION_ROOT:
-            case C2W_INTERACTION_ROOT:
+            case INTERACTION_CPSWT:
             case SIMULATION_END:
             case FEDERATE_JOIN:
             case FEDERATE_RESIGN:
@@ -298,7 +291,28 @@ public class ObjectModel {
      * @return True if the object class is used in the {@link GatewayFederate} implementation.
      */
     public boolean isCoreObject(ObjectClassType object) {
-        return false; // there are no core objects in the current implementation
+        final String classPath = getClassPath(object);
+        
+        switch (classPath) {
+            case OBJECT_ROOT:
+            case OBJECT_MOM:
+                return true;
+            default:
+                return false;
+        }
+    }
+    
+    /**
+     * Registers the Eclipse Modeling Framework (EMF) package that was generated for the Simulation Object Model (SOM)
+     * schema. If a gateway application extends the SOM schema, it should override this method with appropriate calls
+     * to registerPackage for the new EMF model.
+     */
+    protected void registerPackage() {
+        if (!packageRegistered) {
+            Deserialize.associateExtension("xml", new _2010ResourceFactoryImpl());
+            Deserialize.registerPackage(_2010Package.eNS_URI, _2010Package.eINSTANCE);
+            packageRegistered = true;
+        }
     }
     
     private boolean isPublish(SharingType sharingType) {
@@ -315,6 +329,12 @@ public class ObjectModel {
         }
         SharingEnumerations sharingValue = sharingType.getValue();
         return sharingValue == SharingEnumerations.SUBSCRIBE || sharingValue == SharingEnumerations.PUBLISH_SUBSCRIBE;
+    }
+    
+    private ObjectModelType readObjectModel(String filepath) {
+        registerPackage();
+        DocumentRoot documentRoot = (DocumentRoot) Deserialize.it(filepath);
+        return documentRoot.getObjectModel();
     }
     
     private void initializeInteractionVariables() {

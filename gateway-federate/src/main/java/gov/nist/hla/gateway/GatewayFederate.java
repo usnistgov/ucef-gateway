@@ -907,7 +907,7 @@ public class GatewayFederate {
                 classHandle = rtiAmb.getObjectClass(instanceHandle);
                 className = rtiAmb.getObjectClassName(classHandle);
                 
-                if (className.startsWith("ObjectRoot.Manager.")) {
+                if (className.startsWith(ObjectModel.OBJECT_MOM + ".")) {
                     log.info("discovered RTI managed object {} ({})", instanceName, className);
 
                     // get a set of subscribed attribute names from the object model
@@ -973,12 +973,12 @@ public class GatewayFederate {
     private Map<String, String> addRootParameters(String className, Map<String, String> parameters) {
         log.trace("addRootParameters " + className + " " + parameters.toString());
         Map<String, String> modifiedParameters = new HashMap<String, String>(parameters);
-        if (className.toLowerCase().contains("c2winteractionroot")) {
+        if (className.contains(ObjectModel.INTERACTION_CPSWT)) {
             modifiedParameters.putIfAbsent("sourceFed", configuration.getFederateName());
             modifiedParameters.putIfAbsent("originFed", configuration.getFederateName());
             modifiedParameters.putIfAbsent("federateFilter", "");
             modifiedParameters.putIfAbsent("actualLogicalGenerationTime", Double.toString(0.0));
-            log.debug("added C2WInteractionRoot parameters to " + className);
+            log.debug("added {} parameters to {}", ObjectModel.INTERACTION_CPSWT, className);
         }
         return modifiedParameters;
     }
