@@ -8,7 +8,3 @@ mvn clean install
 cd $rootdir/gateway-federate
 mvn javadoc:javadoc
 
-# compile test federation
-cd $rootdir/test-federation
-./build.sh
-
