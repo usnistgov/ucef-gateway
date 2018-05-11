@@ -276,6 +276,9 @@ public class GatewayFederate {
      * @return A timestamp to use as a parameter for {@link #sendInteraction} and {@link #updateObject}
      */
     public double getTimeStamp() {
+        if (fedAmb.isTimeAdvancing()) {
+            return lastRequestedTime + configuration.getLookAhead();
+        }
         return fedAmb.getLogicalTime() + configuration.getLookAhead();
     }
 
