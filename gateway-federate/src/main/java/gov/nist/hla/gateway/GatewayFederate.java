@@ -222,6 +222,7 @@ public class GatewayFederate {
                 callback.doTimeStep(lastRequestedTime);
                 advanceLogicalTime();
             }
+            callback.prepareToResign();
 
             if (!configuration.getIsLateJoiner() && receivedSimEnd) {
                 synchronize(READY_TO_RESIGN);
