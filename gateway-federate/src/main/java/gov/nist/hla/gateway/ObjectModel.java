@@ -36,19 +36,44 @@ import gov.nist.sds4emf.Deserialize;
  * @author Thomas Roth
  */
 public class ObjectModel {
+    /**
+     * The string identifier of the root HLA interaction class.
+     */
+    public static final String INTERACTION_ROOT = "InteractionRoot";
+    
+    /**
+     * The string identifier of the parent class for interactions generated from WebGME/UCEF.
+     */
+    public static final String INTERACTION_CPSWT = INTERACTION_ROOT + ".C2WInteractionRoot";
+    
+    /**
+     * The string identifier of the interaction that indicates all federates should resign.
+     */
+    public static final String SIMULATION_END = INTERACTION_CPSWT + ".SimulationControl.SimEnd";
+    
+    /**
+     * The string identifier of the interaction that is broadcast when a federate joins the federation.
+     */
+    public static final String FEDERATE_JOIN = INTERACTION_CPSWT + ".FederateJoinInteraction";
+    
+    /**
+     * The string identifier of the interaction that is broadcast when a federate leaves the federation.
+     */
+    public static final String FEDERATE_RESIGN = INTERACTION_CPSWT + ".FederateResignInteraction";
+    
+    /**
+     * The string identifier of the root HLA object class.
+     */
+    public static final String OBJECT_ROOT = "ObjectRoot";
+    
+    /**
+     * The string identifier of the parent class for objects managed by the RTI Management Object Model (MOM).
+     */
+    public static final String OBJECT_MOM = OBJECT_ROOT + ".Manager";
+    
     private static final Logger log = LogManager.getLogger();
     
     private static boolean packageRegistered = false;
-    
-    private static ObjectModelType readObjectModel(String filepath) {
-        if (!packageRegistered) {
-            Deserialize.associateExtension("xml", new _2010ResourceFactoryImpl());
-            Deserialize.registerPackage(_2010Package.eNS_URI, _2010Package.eINSTANCE);
-            packageRegistered = true;
-        }
-        DocumentRoot documentRoot = (DocumentRoot) Deserialize.it(filepath);
-        return documentRoot.getObjectModel();
-    }
     
     private ObjectModelType objectModel;
     
@@ -81,7 +106,7 @@ public class ObjectModel {
      */
     public ObjectModel(String filepath) {
         log.info("creating object model from " + filepath);
-        this.objectModel = ObjectModel.readObjectModel(filepath);
+        this.objectModel = readObjectModel(filepath);
         initializeInteractionVariables();
         initializeObjectVariables();
     }
@@ -155,6 +180,29 @@ public class ObjectModel {
             }
         }
         return null;
+    }
+    
+    /**
+     * Checks if the passed interaction class is used in the {@link GatewayFederate} implementation. The gateway
+     * handles some core interactions to communicate with federates generated from UCEF. These interactions might not
+     * be useful to the gateway application, and this method can be used to filter them.
+     * 
+     * @param interaction An interaction from the object model to compare against the core interactions.
+     * @return True if the interaction is used in the {@link GatewayFederate} implementation.
+     */
+    public boolean isCoreInteraction(InteractionClassType interaction) {
+        final String classPath = getClassPath(interaction);
+        
+        switch (classPath) {
+            case INTERACTION_ROOT:
+            case INTERACTION_CPSWT:
+            case SIMULATION_END:
+            case FEDERATE_JOIN:
+            case FEDERATE_RESIGN:
+                return true;
+            default:
+                return false;
+        }
     }
     
     /**
@@ -260,6 +308,39 @@ public class ObjectModel {
         return null;
     }
     
+    /**
+     * Checks if the passed object class is used in the {@link GatewayFederate} implementation. The gateway may in the
+     * future handle some core objects to communicate with federates generated from UCEF. These objects might not be
+     * useful to the gateway application, and this method can be used to filter them.
+     * 
+     * @param object An object class from the object model to compare against the core objects.
+     * @return True if the object class is used in the {@link GatewayFederate} implementation.
+     */
+    public boolean isCoreObject(ObjectClassType object) {
+        final String classPath = getClassPath(object);
+        
+        switch (classPath) {
+            case OBJECT_ROOT:
+            case OBJECT_MOM:
+                return true;
+            default:
+                return false;
+        }
+    }
+    
+    /**
+     * Registers the Eclipse Modeling Framework (EMF) package that was generated for the Simulation Object Model (SOM)
+     * schema. If a gateway application extends the SOM schema, it should override this method with appropriate calls
+     * to registerPackage for the new EMF model.
+     */
+    protected void registerPackage() {
+        if (!packageRegistered) {
+            Deserialize.associateExtension("xml", new _2010ResourceFactoryImpl());
+            Deserialize.registerPackage(_2010Package.eNS_URI, _2010Package.eINSTANCE);
+            packageRegistered = true;
+        }
+    }
+    
     private boolean isPublish(SharingType sharingType) {
         if (sharingType == null) {
             return false;
@@ -274,6 +355,12 @@ public class ObjectModel {
         }
         SharingEnumerations sharingValue = sharingType.getValue();
         return sharingValue == SharingEnumerations.SUBSCRIBE || sharingValue == SharingEnumerations.PUBLISH_SUBSCRIBE;
+    }
+    
+    private ObjectModelType readObjectModel(String filepath) {
+        registerPackage();
+        DocumentRoot documentRoot = (DocumentRoot) Deserialize.it(filepath);
+        return documentRoot.getObjectModel();
     }
     
     private void initializeInteractionVariables() {

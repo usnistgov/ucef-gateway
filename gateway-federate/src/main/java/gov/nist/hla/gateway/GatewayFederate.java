@@ -99,17 +99,13 @@ public class GatewayFederate {
     private static final String READY_TO_POPULATE = "readyToPopulate";
     private static final String READY_TO_RUN = "readyToRun";
     private static final String READY_TO_RESIGN = "readyToResign";
-
-    private static final String SIMULATION_END = "InteractionRoot.C2WInteractionRoot.SimulationControl.SimEnd";
-    private static final String FEDERATE_JOIN = "InteractionRoot.C2WInteractionRoot.FederateJoinInteraction";
-    private static final String FEDERATE_RESIGN = "InteractionRoot.C2WInteractionRoot.FederateResignInteraction";
-
+    
     private GatewayFederateConfig configuration;
     private GatewayCallback callback;
+    private ObjectModel objectModel;
 
     private RTIambassador rtiAmb;
     private FederateAmbassador fedAmb;
-    private ObjectModel objectModel;
 
     private boolean isRunning = false;
     private boolean hasTimeStarted = false;
@@ -144,13 +140,36 @@ public class GatewayFederate {
     public GatewayFederate(GatewayFederateConfig configuration, GatewayCallback callback) {
         this.configuration = configuration;
         this.callback = callback;
+        objectModel = new ObjectModel(configuration.getFomFilepath());
+        
         try {
             rtiAmb = RtiFactoryFactory.getRtiFactory().createRtiAmbassador();
         } catch (RTIinternalError e) {
             throw new RTIAmbassadorException(e);
         }
         fedAmb = new FederateAmbassador();
-        objectModel = new ObjectModel(configuration.getFomFilepath());
+    }
+    
+    /**
+     * Constructs a gateway federate using the given configuration and {@link ObjectModel} that will yield control
+     * during {@link #run} to the given {@link GatewayCallback}. This method should only be used if the gateway
+     * application defines a new class derived from {@link ObjectModel} with extended functionality.
+     * 
+     * @param configuration A configuration instance created using {@link #readConfiguration}
+     * @param callback A set of callback functions that will be invoked during {@link #run}
+     * @param objectModel The object model the gateway application will use during execution.
+     */
+    public GatewayFederate(GatewayFederateConfig configuration, GatewayCallback callback, ObjectModel objectModel) {
+        this.configuration = configuration;
+        this.callback = callback;
+        this.objectModel = objectModel;
+        
+        try {
+            rtiAmb = RtiFactoryFactory.getRtiFactory().createRtiAmbassador();
+        } catch (RTIinternalError e) {
+            throw new RTIAmbassadorException(e);
+        }
+        fedAmb = new FederateAmbassador();
     }
 
     /**
@@ -258,6 +277,9 @@ public class GatewayFederate {
      * @return A timestamp to use as a parameter for {@link #sendInteraction} and {@link #updateObject}
      */
     public double getTimeStamp() {
+        if (fedAmb.isTimeAdvancing()) {
+            return lastRequestedTime + configuration.getLookAhead();
+        }
         return fedAmb.getLogicalTime() + configuration.getLookAhead();
     }
 
@@ -729,8 +751,8 @@ public class GatewayFederate {
             throws FederateNotExecutionMember {
         log.trace("notifyOfFederationJoin");
 
-        if (!objectModel.getPublishedInteractions().contains(objectModel.getInteraction(FEDERATE_JOIN))) {
-            log.warn("not configured to publish " + FEDERATE_JOIN);
+        if (!objectModel.getPublishedInteractions().contains(objectModel.getInteraction(ObjectModel.FEDERATE_JOIN))) {
+            log.warn("not configured to publish " + ObjectModel.FEDERATE_JOIN);
             return;
         }
 
@@ -744,12 +766,12 @@ public class GatewayFederate {
         }
 
         try {
-            sendInteraction(FEDERATE_JOIN, parameters); // does this need a timestamp ?
+            sendInteraction(ObjectModel.FEDERATE_JOIN, parameters); // does this need a timestamp ?
         } catch (InteractionClassNotPublished e) {
             // FEDERATE_JOIN is in the published interactions set
             throw new RTIAmbassadorException("unreachable code", e);
         } catch (NameNotFound e) {
-            throw new RTIAmbassadorException("unexpected parameters for " + FEDERATE_JOIN, e);
+            throw new RTIAmbassadorException("unexpected parameters for " + ObjectModel.FEDERATE_JOIN, e);
         }
     }
 
@@ -757,8 +779,8 @@ public class GatewayFederate {
             throws FederateNotExecutionMember {
         log.trace("notifyOfFederationResign");
 
-        if (!objectModel.getPublishedInteractions().contains(objectModel.getInteraction(FEDERATE_RESIGN))) {
-            log.warn("not configured to publish " + FEDERATE_RESIGN);
+        if (!objectModel.getPublishedInteractions().contains(objectModel.getInteraction(ObjectModel.FEDERATE_RESIGN))) {
+            log.warn("not configured to publish " + ObjectModel.FEDERATE_RESIGN);
             return;
         }
 
@@ -772,12 +794,12 @@ public class GatewayFederate {
         }
 
         try {
-            sendInteraction(FEDERATE_RESIGN, parameters); // does this need a timestamp ?
+            sendInteraction(ObjectModel.FEDERATE_RESIGN, parameters); // does this need a timestamp ?
         } catch (InteractionClassNotPublished e) {
             // FEDERATE_RESIGN is in the published interactions set
             throw new RTIAmbassadorException("unreachable code", e);
         } catch (NameNotFound e) {
-            throw new RTIAmbassadorException("unexpected parameters for " + FEDERATE_RESIGN, e);
+            throw new RTIAmbassadorException("unexpected parameters for " + ObjectModel.FEDERATE_RESIGN, e);
         }
     }
 
@@ -834,9 +856,9 @@ public class GatewayFederate {
                 Map<String, String> parameters = convertToMap(receivedInteraction);
                 callback.receiveInteraction(lastRequestedTime, interactionName, parameters);
 
-                if (interactionName.equals(SIMULATION_END)) {
+                if (interactionName.equals(ObjectModel.SIMULATION_END)) {
                     receivedSimEnd = true;
-                    log.info("received " + SIMULATION_END);
+                    log.info("received " + ObjectModel.SIMULATION_END);
                 }
             }
         } catch (InteractionClassNotDefined | InteractionParameterNotDefined e) {
@@ -889,7 +911,7 @@ public class GatewayFederate {
                 classHandle = rtiAmb.getObjectClass(instanceHandle);
                 className = rtiAmb.getObjectClassName(classHandle);
                 
-                if (className.startsWith("ObjectRoot.Manager.")) {
+                if (className.startsWith(ObjectModel.OBJECT_MOM + ".")) {
                     log.info("discovered RTI managed object {} ({})", instanceName, className);
 
                     // get a set of subscribed attribute names from the object model
@@ -955,12 +977,12 @@ public class GatewayFederate {
     private Map<String, String> addRootParameters(String className, Map<String, String> parameters) {
         log.trace("addRootParameters " + className + " " + parameters.toString());
         Map<String, String> modifiedParameters = new HashMap<String, String>(parameters);
-        if (className.toLowerCase().contains("c2winteractionroot")) {
+        if (className.equals(ObjectModel.INTERACTION_CPSWT) || className.startsWith(ObjectModel.INTERACTION_CPSWT + ".")) {
             modifiedParameters.putIfAbsent("sourceFed", configuration.getFederateName());
             modifiedParameters.putIfAbsent("originFed", configuration.getFederateName());
             modifiedParameters.putIfAbsent("federateFilter", "");
             modifiedParameters.putIfAbsent("actualLogicalGenerationTime", Double.toString(0.0));
-            log.debug("added C2WInteractionRoot parameters to " + className);
+            log.debug("added {} parameters to {}", ObjectModel.INTERACTION_CPSWT, className);
         }
         return modifiedParameters;
     }
