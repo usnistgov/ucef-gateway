@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -106,6 +107,8 @@ public class GatewayFederate {
 
     private RTIambassador rtiAmb;
     private FederateAmbassador fedAmb;
+
+    private Map<String, Map<String, String>> objectInstances = new HashMap<String, Map<String, String>>();
 
     private boolean isRunning = false;
     private boolean hasTimeStarted = false;
@@ -317,7 +320,9 @@ public class GatewayFederate {
         try {
             int classHandle = rtiAmb.getObjectClassHandle(className);
             int instanceHandle = rtiAmb.registerObjectInstance(classHandle);
-            return rtiAmb.getObjectInstanceName(instanceHandle);
+            final String instanceName = rtiAmb.getObjectInstanceName(instanceHandle);
+            updateObjectState(instanceName, new HashMap<String, String>());
+            return instanceName;
         } catch (ObjectClassNotDefined | ObjectNotKnown e) {
             // classHandle retrieved from the RTI ambassador
             // instanceHandle received from the RTI ambassador
@@ -346,6 +351,7 @@ public class GatewayFederate {
         try {
             int classHandle = rtiAmb.getObjectClassHandle(className);
             rtiAmb.registerObjectInstance(classHandle, instanceName);
+            updateObjectState(instanceName, new HashMap<String, String>());
             return instanceName;
         } catch (ObjectClassNotDefined e) {
             // classHandle retrieved from the RTI ambassador
@@ -471,6 +477,7 @@ public class GatewayFederate {
             int classHandle = rtiAmb.getObjectClass(instanceHandle);
             SuppliedAttributes suppliedAttributes = convertToSuppliedAttributes(classHandle, attributes);
             rtiAmb.updateAttributeValues(instanceHandle, suppliedAttributes, null);
+            updateObjectState(instanceName, attributes);
         } catch (ObjectClassNotDefined | AttributeNotDefined e) {
             // classHandle retrieved from the RTI ambassador
             // convertToSuppliedAttributes returns valid attributes
@@ -505,6 +512,7 @@ public class GatewayFederate {
             int classHandle = rtiAmb.getObjectClass(instanceHandle);
             SuppliedAttributes suppliedAttributes = convertToSuppliedAttributes(classHandle, attributes);
             rtiAmb.updateAttributeValues(instanceHandle, suppliedAttributes, null, new DoubleTime(timestamp));
+            updateObjectState(instanceName, attributes);
         } catch (ObjectClassNotDefined | AttributeNotDefined e) {
             // classHandle retrieved from the RTI ambassador
             // convertToSuppliedAttributes returns valid attributes
@@ -514,6 +522,21 @@ public class GatewayFederate {
         } catch (RTIinternalError | ConcurrentAccessAttempted e) {
             throw new RTIAmbassadorException(e);
         } 
+    }
+
+    /**
+     * Get the current value of all attributes for a known object instance. An object instance is considered known if
+     * it was registered through a prior call to {@link #registerObjectInstance}, or if its instance name was passed
+     * as an argument to {@link GatewayCallback#receiveObject}.
+     *
+     * @param instanceName The instance name of a discovered or registered object instance.
+     * @return An unmodifiable map of attributes and their current value, or null if the object instance is not known.
+     */
+    public Map<String, String> getObjectState(String instanceName) {
+        if (objectInstances.containsKey(instanceName)) {
+            return Collections.unmodifiableMap(objectInstances.get(instanceName));
+        }
+        return null;
     }
 
     private boolean isExitCondition() {
@@ -879,6 +902,7 @@ public class GatewayFederate {
                 String className = rtiAmb.getObjectClassName(classHandle);
                 String instanceName = receivedObjectReflection.getInstanceName();
                 Map<String, String> attributes = convertToMap(classHandle, receivedObjectReflection);
+                updateObjectState(instanceName, attributes);
                 callback.receiveObject(lastRequestedTime, className, instanceName, attributes);
             }
         } catch (ObjectClassNotDefined | AttributeNotDefined e) {
@@ -1009,5 +1033,14 @@ public class GatewayFederate {
             suppliedAttributes.add(attributeHandle, attributeValue);
         }
         return suppliedAttributes;
+    }
+
+    private void updateObjectState(String instanceName, Map<String, String> attributes) {
+        log.trace("updateObjectState for {} with {}", instanceName, attributes.toString());
+        if (!objectInstances.containsKey(instanceName)) {
+            log.debug("tracking state for the new object instance {}", instanceName);
+            objectInstances.put(instanceName, new HashMap<String, String>());
+        }
+        objectInstances.get(instanceName).putAll(attributes);
     }
 }
