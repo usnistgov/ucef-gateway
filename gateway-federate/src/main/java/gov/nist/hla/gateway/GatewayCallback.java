@@ -79,6 +79,14 @@ public interface GatewayCallback {
     void doTimeStep(Double timeStep);
     
     /**
+     * This callback should be used to perform functions that must occur during the last logical time step. It is called
+     * immediately after the last logical time advance request to HLA is granted, but before the {@link GatewayFederate}
+     * resigns from the federation. It will be called after all interactions and object updates have been received in
+     * lieu of {@link #doTimeStep} during the final logical time step.
+     */
+    void prepareToResign();
+    
+    /**
      * This callback should be used to perform cleanup functions for the user application. It is called after the
      * {@link GatewayFederate} resigns from the federation, but before {@link GatewayFederate#run} returns. It
      * will be called exactly once per {@link GatewayFederate#run}, and no other callbacks will be called after it.
