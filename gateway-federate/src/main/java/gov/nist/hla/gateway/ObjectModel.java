@@ -365,7 +365,12 @@ public class ObjectModel {
     
     private void initializeInteractionVariables() {
         log.trace("initializeInteractionVariables");
-        
+
+        if (objectModel.getInteractions() == null) {
+            log.info("no interactions table");
+            return;
+        }        
+
         InteractionClassType interactionRoot = objectModel.getInteractions().getInteractionClass();
         if (interactionRoot == null) {
             log.info("empty interactions table");
@@ -438,6 +443,11 @@ public class ObjectModel {
     private void initializeObjectVariables() {
         log.trace("initializeObjectVariables");
         
+        if (objectModel.getObjects() == null) {
+            log.info("no objects table");
+            return;
+        }
+
         ObjectClassType objectRoot = objectModel.getObjects().getObjectClass();
         if (objectRoot == null) {
             log.info("empty objects table");
